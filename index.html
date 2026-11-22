@@ -60,6 +60,23 @@ label.btn input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 .with-opl .r{grid-template-columns:minmax(110px,1fr) auto}
 .with-opl .r .extra{grid-column:1/-1}
 .r.afw{opacity:.45}
+.r.grp{grid-template-columns:minmax(120px,1fr) minmax(0,4.2fr);align-items:start}
+.r.grp .nm small b{color:var(--mint)}
+.dls{display:grid;gap:0}
+.ov{width:100%;font-size:15px;margin-bottom:6px}
+.ov td{padding:5px 8px;border-bottom:1px solid var(--line)}
+.ov tr.m td{background:var(--paper2);font-weight:700;font-size:13px;color:var(--mute);text-transform:none}
+.ov tr.v td{font-weight:600}
+.ov tr.d td{color:var(--mute);font-size:14px;border-bottom-style:dashed}
+.ov tr.d td:first-child{padding-left:30px}
+.ov tr.tot td{font-weight:800;font-size:17px;border-bottom:0;border-top:2px solid var(--mint)}
+.ov tr[data-act]{cursor:pointer}.ov tr[data-act]:hover td{background:var(--paper2)}
+.ov .open{color:var(--warn)}
+.dl{display:grid;grid-template-columns:30px auto minmax(0,1fr);gap:6px 12px;align-items:center;padding:6px 0;border-top:1px dashed var(--line)}
+.dl:first-child{border-top:0;padding-top:0}
+.dl .dlab{font-weight:800;color:var(--mint);font-size:17px;text-align:center}
+.with-opl .r.grp{grid-template-columns:1fr}
+.with-opl .dl{grid-template-columns:30px auto}.with-opl .dl .extra{grid-column:2/-1}
 .r .nm{font-weight:600}
 .r .nm small{display:block;font-weight:500;color:var(--mute);font-size:13px}
 .score{display:flex;align-items:center;gap:4px}
@@ -73,6 +90,7 @@ label.btn input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 .code[aria-pressed=true]{border:1px solid var(--err);background:var(--err-bg);color:var(--err);font-weight:600}
 .extra input.opm{flex:1 1 180px;min-height:38px;font-size:14px;padding:5px 9px}
 .cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
+@media(min-width:901px){.cols>div:last-child{position:sticky;top:150px;max-height:calc(100vh - 170px);overflow:auto}}
 .work{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
 .work.with-opl{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .opl{position:sticky;top:150px;background:var(--paper);border-radius:12px;padding:12px;max-height:calc(100vh - 170px);display:flex;flex-direction:column;gap:8px}
@@ -124,7 +142,8 @@ details summary{cursor:pointer;font-weight:600;min-height:32px}
 #copybox>div{background:var(--paper);border-radius:12px;padding:18px;max-width:640px;width:100%}
 @media(max-width:900px){.work.with-opl{grid-template-columns:1fr}.opl{position:static;max-height:none}.opl .view{max-height:70vh}}
 @media(max-width:600px){
- .r,.with-opl .r{grid-template-columns:1fr}
+ .r,.with-opl .r,.r.grp{grid-template-columns:1fr}
+ .dl{grid-template-columns:30px auto}.dl .extra{grid-column:2/-1}
  .cols{grid-template-columns:1fr}
  .codeed{grid-template-columns:1fr 76px 44px}.codeed input:nth-child(2),.codeed input:nth-child(3){grid-column:1/-1}
  .deeled{grid-template-columns:50px 1fr 64px 44px}.deeled input:nth-child(4){display:none}
@@ -409,9 +428,13 @@ async function exportExcel(btn){
 let pdfLib=null,drawSeq=0;const pdfDocs={};
 function b64bytes(b){const bin=atob(b),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u}
 async function getPdf(id){
-  if(!pdfLib){pdfLib=await import('./pdfjs/pdf.min.mjs');pdfLib.GlobalWorkerOptions.workerSrc='./pdfjs/pdf.worker.min.mjs'}
-  return pdfDocs[id]||=pdfLib.getDocument({data:b64bytes(BIJ[id].b64),isEvalSupported:false}).promise;
+  if(!pdfLib){try{pdfLib=await import('./pdfjs/pdf.min.mjs')}catch(e){throw new Error('nomodule')}pdfLib.GlobalWorkerOptions.workerSrc='./pdfjs/pdf.worker.min.mjs'}
+  return pdfDocs[id]||=pdfLib.getDocument({data:b64bytes(BIJ[id].b64),isEvalSupported:false}).promise.catch(e=>{delete pdfDocs[id];throw e});
 }
+let oplUrl=null,oplUrlId=null;
+function openOpl(){const t=act(),b=t?.opl&&BIJ[t.opl.id];if(!b)return;
+  if(oplUrlId!==t.opl.id){if(oplUrl)URL.revokeObjectURL(oplUrl);oplUrl=URL.createObjectURL(new Blob([b64bytes(b.b64)],{type:b.type}));oplUrlId=t.opl.id}
+  const a=document.createElement('a');a.href=oplUrl;a.target='_blank';a.rel='noopener';if(/pdf/.test(b.type))a.download=b.naam||'modeloplossing.pdf';document.body.appendChild(a);a.click();a.remove()}
 async function drawOpl(){
   const t=act(),box=document.getElementById('oplview');if(!t?.opl||!box)return;
   const b=BIJ[t.opl.id];if(!b){box.innerHTML='<p class="sub" style="padding:12px;color:#444">Het bestand van deze modeloplossing ontbreekt. Voeg het opnieuw toe bij Toetsen.</p>';return}
@@ -424,7 +447,7 @@ async function drawOpl(){
     const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
     await page.render({canvasContext:c.getContext('2d'),viewport:vp,canvas:c}).promise;
     if(seq!==drawSeq)return;box.innerHTML='';box.appendChild(c);
-  }catch(e){box.innerHTML='<p class="sub" style="padding:12px;color:#444">De PDF kan niet getoond worden.</p>'}
+  }catch(e){box.innerHTML=`<div style="padding:14px;color:#333"><p style="margin:0 0 8px"><b>De PDF kan hier niet getoond worden.</b></p><p style="margin:0 0 10px;font-size:14px">${e?.message==='nomodule'?'Het PDF-onderdeel van de app ontbreekt. Controleer of de map <b>pdfjs</b> (met pdf.min.mjs en pdf.worker.min.mjs) op GitHub naast index.html staat.':'Deze browser kan de PDF niet weergeven in de app.'} Je kan hem wel apart openen.</p><button class="btn pri" data-act="openopl">PDF apart openen</button></div>`}
 }
 const fileB64=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(',')[1]||'');fr.onerror=rej;fr.readAsDataURL(f)});
 function verwijderOplData(o){if(o&&!Object.values(T).some(x=>x.opl?.id===o.id))delete BIJ[o.id]}
@@ -451,7 +474,7 @@ function render(){
   const t=act();
   if(['verbeter','overzicht','skore'].includes(ui.tab)&&(!t||!L().length)){main.innerHTML=leeg(t);return}
   main.innerHTML=ui.tab==='start'?vStart():ui.tab==='verbeter'?vVerbeter(t):ui.tab==='overzicht'?vOverzicht(t):ui.tab==='skore'?vSkore(t):ui.tab==='klassen'?vKlassen():ui.tab==='gegevens'?vGegevens():vInstel();
-  if(ui.tab==='verbeter'&&t?.opl&&ui.toonOpl&&ui.modus==='vraag'){const u=unit(t,ui.vraag);if(ui.oplVraag!==ui.vraag){ui.oplVraag=ui.vraag;if(u?.blz)ui.oplPage=+u.blz}drawOpl()}
+  if(ui.tab==='verbeter'&&t?.opl&&ui.toonOpl&&ui.modus==='vraag'){const v=findV(t,ui.vraag);if(ui.oplVraag!==ui.vraag){ui.oplVraag=ui.vraag;if(v&&vBlz(v))ui.oplPage=+vBlz(v)}drawOpl()}
 }
 function vStart(){
   if(!S.klassen.length)return leeg(act());
@@ -477,35 +500,59 @@ function extraCtl(t,l,u){
   const e=t.scores[l]?.[u.key]||{c:[],o:''};
   return `<div class="extra">${u.codes.map(c=>`<button class="code" data-act="code" data-l="${l}" data-k="${u.key}" data-c="${esc(c.id)}" aria-pressed="${(e.c||[]).includes(c.id)}" title="${esc(c.fb)}">${esc(c.label)}${+c.aftrek>0?`<em>−${nf(c.aftrek)}</em>`:''}</button>`).join('')}<input class="opm" type="text" data-l="${l}" data-k="${u.key}" value="${esc(e.o||'')}" placeholder="eigen opmerking"></div>`;
 }
-const rid2=(l,k)=>`r-${l}-${k.replace('.','_')}`;
-function rowQ(t,l,u){const ll=L().find(x=>x.id===l),a=t.afw?.[l];
-  return `<div class="r${a?' afw':''}" id="${rid2(l,u.key)}"><div class="nm">${esc(ll?.naam)}${a?'<small>afwezig</small>':''}</div>${a?'<div></div>':scoreCtl(t,l,u)+extraCtl(t,l,u)}</div>`}
-function rowL(t,l,u){return `<div class="r" id="${rid2(l,u.key)}"><div class="nm">Vraag ${esc(u.nr)}<small>${esc(u.label)}</small></div>${scoreCtl(t,l,u)}${extraCtl(t,l,u)}</div>`}
+const rid2=(l,id)=>`r-${l}-${String(id).replace('.','_')}`;
+const vUnits=(t,v)=>units(t).filter(u=>u.v===v);
+function vScore(t,l,v){let s=0,n=0;const us=vUnits(t,v);for(const u of us){const p=pOf(t,l,u.key);if(p!=null){s+=p;n++}}return{s,n,klaar:n===us.length}}
+function blok(t,l,v,kop){
+  const us=vUnits(t,v),a=t.afw?.[l];
+  if(a)return `<div class="r afw" id="${rid2(l,v.id)}"><div class="nm">${kop}<small>afwezig</small></div><div></div></div>`;
+  if(!v.delen?.length){const u=us[0];return `<div class="r" id="${rid2(l,v.id)}"><div class="nm">${kop}</div>${scoreCtl(t,l,u)}${extraCtl(t,l,u)}</div>`}
+  const vs=vScore(t,l,v);
+  return `<div class="r grp" id="${rid2(l,v.id)}"><div class="nm">${kop}<small>${vs.n?`<b>${nf(vs.s)}</b> / ${nf(vMax(v))}`:`– / ${nf(vMax(v))}`}</small></div><div class="dls">${us.map(u=>`<div class="dl"><span class="dlab" title="${esc(u.label)}">${esc(u.d.label)}</span>${scoreCtl(t,l,u)}${extraCtl(t,l,u)}</div>`).join('')}</div></div>`;
+}
+function rowQ(t,l,v){const ll=L().find(x=>x.id===l);return blok(t,l,v,esc(ll?.naam))}
+function rowL(t,l,v){return blok(t,l,v,`Vraag ${esc(v.nr)}<small>${esc(v.label)}</small>`)}
 function chipsQ(t){
   const ll=aanwezig(t);
-  return `<div class="chips" role="group" aria-label="Vragen">${units(t).map(u=>{const n=ll.filter(x=>pOf(t,x.id,u.key)!=null).length;
-   return `<button class="chip${n===ll.length&&n?' done':''}" data-act="vraag" data-id="${u.key}" aria-pressed="${u.key===ui.vraag}">V${esc(u.nr)} <small>${n}/${ll.length}</small></button>`}).join('')}</div>`;
+  return `<div class="chips" role="group" aria-label="Vragen">${t.vragen.map(v=>{const n=ll.filter(x=>vScore(t,x.id,v).klaar).length;
+   return `<button class="chip${n===ll.length&&n?' done':''}" data-act="vraag" data-id="${v.id}" aria-pressed="${v.id===ui.vraag}">V${esc(v.nr)}${v.delen?.length?`<small>${v.delen.map(d=>esc(d.label)).join('')}</small>`:''} <small>${n}/${ll.length}</small></button>`}).join('')}</div>`;
 }
+const vBlz=v=>v.blz||v.delen?.find(d=>d.blz)?.blz||'';
 function oplPanel(t){
   if(!t.opl)return `<aside class="opl"><b>Modeloplossing</b><p class="sub" style="margin:0">Voeg de modeloplossing toe (PDF of foto). Ze verschijnt hier naast je verbeterlijst, op de juiste pagina per vraag.</p>
    <div class="row-btns"><label class="btn pri">PDF of foto kiezen<input type="file" id="oplfile" accept="application/pdf,image/*"></label><button class="btn" data-act="verberg">Verbergen</button></div>${ui.busyMsg?`<p class="sub">${esc(ui.busyMsg)}</p>`:''}</aside>`;
   const pdf=/pdf/.test(t.opl.type);
   return `<aside class="opl"><div class="row-btns" style="justify-content:space-between"><b>Modeloplossing</b>${pdf?`<span class="row-btns"><button class="btn" data-act="pprev" aria-label="vorige pagina">‹</button><span class="meta" id="oplpage">blz ${ui.oplPage}</span><button class="btn" data-act="pnext" aria-label="volgende pagina">›</button></span>`:''}</div>
    <div class="view" id="oplview"><p class="sub" style="padding:12px;color:#444">Laden…</p></div>
-   <div class="row-btns">${pdf&&unit(t,ui.vraag)?`<button class="btn" data-act="koppel">Koppel deze pagina aan V${esc(unit(t,ui.vraag).nr)}</button>`:''}<button class="btn" data-act="verberg">Verbergen</button></div></aside>`;
+   <div class="row-btns"><button class="btn" data-act="openopl">Apart openen</button>${pdf&&findV(t,ui.vraag)?`<button class="btn" data-act="koppel">Koppel deze pagina aan V${esc(findV(t,ui.vraag).nr)}</button>`:''}<button class="btn" data-act="verberg">Verbergen</button></div></aside>`;
+}
+function overzichtL(t,l){
+  if(t.afw?.[l])return '<p class="sub">Afwezig.</p>';
+  const ms=mods(t),veel=ms.length>1,cel=(p,mx)=>`<td class="n">${p==null?'<span class="open">–</span>':`<b>${nf(p)}</b>`} / ${nf(mx)}</td>`;
+  let h='';
+  for(const m of ms){
+    if(veel){const z=modS(t,l,m);h+=`<tr class="m"><td>${esc(m)}</td><td class="n">${nf(z.s)} / ${nf(z.mx)}</td></tr>`}
+    for(const v of t.vragen.filter(x=>(x.module||'–')===m)){
+      const vs=vScore(t,l,v);
+      h+=`<tr class="v" data-act="naarv" data-id="${v.id}"><td>V${esc(v.nr)} <span class="meta">${esc(v.label)}</span></td>${cel(vs.n?vs.s:null,vMax(v))}</tr>`;
+      if(v.delen?.length)for(const d of v.delen)h+=`<tr class="d" data-act="naarv" data-id="${v.id}"><td>${esc(d.label)}${d.titel?' '+esc(d.titel):''}</td>${cel(pOf(t,l,v.id+'.'+d.id),+d.max||0)}</tr>`;
+    }
+  }
+  const ts=tot(t,l);
+  return `<table class="ov"><tbody>${h}<tr class="tot"><td>Totaal</td><td class="n">${nf(ts.s)} / ${nf(maxT(t))}</td></tr></tbody></table>${ts.klaar?'':`<p class="sub" style="margin:0"><span class="open">–</span> = nog niet gescoord</p>`}`;
 }
 function vVerbeter(t){
   const us=units(t);
-  if(!ui.vraag||!us.find(u=>u.key===ui.vraag))ui.vraag=us[0]?.key;
+  if(!ui.vraag||!findV(t,ui.vraag))ui.vraag=t.vragen[0]?.id;
   if(!ui.lln||!L().find(x=>x.id===ui.lln))ui.lln=L()[0]?.id;
   const seg=`<div class="row-btns"><div class="seg" role="group" aria-label="Modus"><button data-act="modus" data-id="vraag" aria-pressed="${ui.modus==='vraag'}">Per vraag</button><button data-act="modus" data-id="lln" aria-pressed="${ui.modus==='lln'}">Per leerling</button></div>${ui.modus==='vraag'&&!ui.toonOpl?'<button class="btn" data-act="toon">Modeloplossing tonen</button>':''}<span class="meta">${esc(klas().naam)} · ${esc(t.titel)}</span></div>`;
   if(!us.length)return seg+'<p class="note">Deze toets heeft nog geen vragen. Voeg ze toe bij Toetsen.</p>';
   if(ui.modus==='vraag'){
-    const u=us.find(x=>x.key===ui.vraag),wo=ui.toonOpl,i=us.indexOf(u);
-    return `${seg}${chipsQ(t)}<div class="work${wo?' with-opl':''}"><div><div class="qhead"><b>Vraag ${esc(u.nr)}: ${esc(u.label)}</b><span class="meta">${esc(u.module||'–')} · LPD ${esc(u.lpd||'–')} · max ${nf(u.max)}${u.blz?' · blz '+esc(u.blz):''}</span></div>
-    <p class="sub">Typ een score en druk op Enter voor de volgende leerling. Een foutcode met aftrek past de score meteen aan.</p>
-    <div class="rows">${L().map(x=>rowQ(t,x.id,u)).join('')}</div>
-    <div class="row-btns" style="margin-top:14px"><button class="btn" data-act="qprev" ${i<=0?'disabled':''}>← Vorige vraag</button><button class="btn pri" data-act="qnext" ${i>=us.length-1?'disabled':''}>Volgende vraag →</button></div></div>${wo?oplPanel(t):''}</div>`;
+    const v=findV(t,ui.vraag),wo=ui.toonOpl,i=t.vragen.indexOf(v),hd=v.delen?.length;
+    return `${seg}${chipsQ(t)}<div class="work${wo?' with-opl':''}"><div><div class="qhead"><b>Vraag ${esc(v.nr)}: ${esc(v.label)}</b><span class="meta">${esc(v.module||'–')} · LPD ${esc(v.lpd||'–')} · max ${nf(vMax(v))}${hd?' · '+v.delen.map(d=>`${esc(d.label)}${d.titel?' '+esc(d.titel):''} (${nf(d.max)})`).join(', '):''}${vBlz(v)?' · blz '+esc(vBlz(v)):''}</span></div>
+    <p class="sub">Typ een score en druk op Enter: je springt naar het volgende vakje${hd?' (volgende deelvraag, dan de volgende leerling)':''}. Een foutcode met aftrek past de score meteen aan.</p>
+    <div class="rows">${L().map(x=>rowQ(t,x.id,v)).join('')}</div>
+    <div class="row-btns" style="margin-top:14px"><button class="btn" data-act="qprev" ${i<=0?'disabled':''}>← Vorige vraag</button><button class="btn pri" data-act="qnext" ${i>=t.vragen.length-1?'disabled':''}>Volgende vraag →</button></div></div>${wo?oplPanel(t):''}</div>`;
   }
   const lln=L(),i=lln.findIndex(x=>x.id===ui.lln),l=ui.lln,ts=tot(t,l);
   return `${seg}<div class="row-btns" style="margin:12px 0"><button class="btn" data-act="lprev" ${i<=0?'disabled':''}>← Vorige</button>
@@ -513,10 +560,11 @@ function vVerbeter(t){
    <button class="btn" data-act="lnext" ${i>=lln.length-1?'disabled':''}>Volgende →</button>
    <label class="chip"><input type="checkbox" data-act="afw" ${t.afw?.[l]?'checked':''}> afwezig</label></div>
   <div class="cols"><div><div class="qhead"><b id="ltot">${nf(ts.s)} / ${nf(maxT(t))}</b><span class="meta" id="lmeta">${ts.n} van ${ts.aantal} onderdelen gescoord</span></div>
-   <div class="rows">${t.afw?.[l]?'<p class="sub" style="padding:12px 0">Afwezig: geen scores nodig.</p>':us.map(u=>rowL(t,l,u)).join('')}</div></div>
+   <div class="rows">${t.afw?.[l]?'<p class="sub" style="padding:12px 0">Afwezig: geen scores nodig.</p>':t.vragen.map(v=>rowL(t,l,v)).join('')}</div></div>
+   <div><div class="card" style="margin-bottom:16px"><h3 style="margin-top:0">Puntenoverzicht</h3><div id="ovl">${overzichtL(t,l)}</div></div>
    <div class="card"><h3 style="margin-top:0">Feedback voor Skore</h3><pre class="fb" id="fbprev">${esc(feedback(t,l))}</pre>
    <label class="lbl" for="alg">Algemene opmerking (komt onderaan)</label><textarea id="alg" rows="3" style="min-height:80px">${esc(t.alg?.[l]||'')}</textarea>
-   <p class="row-btns" style="margin:10px 0 0"><button class="btn pri" data-act="copyfb" data-l="${l}">Kopieer feedback</button></p></div></div>`;
+   <p class="row-btns" style="margin:10px 0 0"><button class="btn pri" data-act="copyfb" data-l="${l}">Kopieer feedback</button></p></div></div></div>`;
 }
 function barRow(lbl,q){const c=q<50?'lo':q<70?'mid':'';return `<div class="bar"><span>${lbl}</span><span class="t"><i class="${c}" style="width:${q}%"></i></span><span class="v">${q}%</span></div>`}
 function vOverzicht(t){
@@ -614,12 +662,12 @@ function vGegevens(){
 }
 
 /* ---------- acties ---------- */
-function rerow(l,k){const t=act(),u=unit(t,k),el=document.getElementById(rid2(l,k));if(!el||!u)return;
-  el.outerHTML=ui.modus==='vraag'?rowQ(t,l,u):rowL(t,l,u);side()}
+function rerow(l,k){const t=act(),u=unit(t,k);if(!u)return;const el=document.getElementById(rid2(l,u.v.id));if(!el)return;
+  el.outerHTML=ui.modus==='vraag'?rowQ(t,l,u.v):rowL(t,l,u.v);side()}
 function side(){const t=act();
   if(ui.modus==='vraag'){const c=document.querySelector('.chips');if(c)c.outerHTML=chipsQ(t)}
   else{const l=ui.lln,ts=tot(t,l),a=document.getElementById('ltot'),m=document.getElementById('lmeta'),f=document.getElementById('fbprev');
-   if(a)a.textContent=`${nf(ts.s)} / ${nf(maxT(t))}`;if(m)m.textContent=`${ts.n} van ${ts.aantal} onderdelen gescoord`;if(f)f.textContent=feedback(t,l)}}
+   if(a)a.textContent=`${nf(ts.s)} / ${nf(maxT(t))}`;if(m)m.textContent=`${ts.n} van ${ts.aantal} onderdelen gescoord`;if(f)f.textContent=feedback(t,l);const o=document.getElementById('ovl');if(o)o.innerHTML=overzichtL(t,l)}}
 function focusSc(l,k){const el=document.querySelector(`input.sc[data-l="${l}"][data-k="${k}"]`);if(el){el.focus();el.select()}}
 async function copy(txt,btn){
   try{await navigator.clipboard.writeText(txt);if(btn){const o=btn.textContent;btn.textContent='Gekopieerd ✓';setTimeout(()=>btn.textContent=o,1500)}}
@@ -640,7 +688,7 @@ main.addEventListener('click',async e=>{
    case 'startklas':S.klasActief=id;ui.lln=null;ui.tab=S.toetsen.length?'verbeter':'instel';save();render();scrollTo(0,0);break;
    case 'modus':ui.modus=id;render();break;
    case 'vraag':ui.vraag=id;render();break;
-   case 'qprev':case 'qnext':{const us=units(t),i=us.findIndex(x=>x.key===ui.vraag)+(a==='qnext'?1:-1);if(us[i])ui.vraag=us[i].key;render();scrollTo(0,0);break}
+   case 'qprev':case 'qnext':{const i=t.vragen.findIndex(x=>x.id===ui.vraag)+(a==='qnext'?1:-1);if(t.vragen[i])ui.vraag=t.vragen[i].id;render();scrollTo(0,0);break}
    case 'lprev':case 'lnext':{const i=L().findIndex(x=>x.id===ui.lln)+(a==='lnext'?1:-1);ui.lln=L()[i]?.id||ui.lln;render();break}
    case 'openl':ui.tab='verbeter';ui.modus='lln';ui.lln=l;render();scrollTo(0,0);break;
    case 'dec':setP(l,k,(cur??u.max)-.5);rerow(l,k);break;
@@ -652,7 +700,9 @@ main.addEventListener('click',async e=>{
    case 'verberg':ui.toonOpl=false;render();break;
    case 'pprev':ui.oplPage--;drawOpl();break;
    case 'pnext':ui.oplPage++;drawOpl();break;
-   case 'koppel':{const uu=unit(t,ui.vraag);if(uu){(uu.d||uu.v).blz=String(ui.oplPage);save();const o=b.textContent;b.textContent='Gekoppeld ✓';setTimeout(()=>b.textContent=o,1500)}break}
+   case 'naarv':{const el=document.getElementById(rid2(ui.lln,id));if(el){el.scrollIntoView({behavior:'smooth',block:'center'});const i=el.querySelector('input.sc');if(i)setTimeout(()=>i.focus({preventScroll:true}),300)}break}
+   case 'openopl':openOpl();break;
+   case 'koppel':{const vv=findV(t,ui.vraag);if(vv){vv.blz=String(ui.oplPage);save();const o=b.textContent;b.textContent='Gekoppeld ✓';setTimeout(()=>b.textContent=o,1500)}break}
    case 'oplweg':if(ui.delAsk!=='opl'){ui.delAsk='opl';render();break}{const o=t.opl;t.opl=null;ui.delAsk=null;verwijderOplData(o);save();render()}break;
    case 'copyfb':copy(feedback(t,l),b);break;
    case 'copyscores':copy(L().map(x=>skoreScore(t,x.id)).join('\n'),b);break;
@@ -711,10 +761,8 @@ main.addEventListener('input',e=>{
 });
 main.addEventListener('keydown',e=>{
   const el=e.target;if(!el.classList.contains('sc')||e.key!=='Enter')return;
-  e.preventDefault();const l=el.dataset.l,k=el.dataset.k;el.blur();
-  const t=act(),us=units(t);
-  if(ui.modus==='vraag'){const ll=aanwezig(t),i=ll.findIndex(x=>x.id===l);if(ll[i+1])focusSc(ll[i+1].id,k)}
-  else{const i=us.findIndex(x=>x.key===k);if(us[i+1])focusSc(l,us[i+1].key)}
+  e.preventDefault();const all=[...main.querySelectorAll('input.sc')],nx=all[all.indexOf(el)+1],nl=nx?.dataset.l,nk=nx?.dataset.k;el.blur();
+  if(nx)focusSc(nl,nk);
 });
 main.addEventListener('dragover',e=>{const d=e.target.closest('#drop');if(d){e.preventDefault();d.classList.add('over')}});
 main.addEventListener('dragleave',e=>{const d=e.target.closest('#drop');if(d)d.classList.remove('over')});

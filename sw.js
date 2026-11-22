@@ -1,5 +1,5 @@
 // Skoreboek service worker: app werkt offline; nieuwe versie = VERSIE ophogen
-const VERSIE='skoreboek-v1';
+const VERSIE='skoreboek-v4';
 const BESTANDEN=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','icon-maskable-512.png','pdfjs/pdf.min.mjs','pdfjs/pdf.worker.min.mjs'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(VERSIE).then(c=>c.addAll(BESTANDEN)));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==VERSIE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
