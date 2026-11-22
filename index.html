@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c1f26">
+<title>Skoreboek</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* VOICE: rustig nachtelijk werkinstrument voor een leerkracht met een stapel examens
+   IDEA: een puntenboek dat 's avonds aan de keukentafel opengaat: donker blad, heldere cijfers
+   PICTURE: het werkvlak zelf: rijen leerlingen met grote scoreknoppen, foutcodes met aftrek, modeloplossing ernaast
+   COLOUR and TYPE: antraciet #1c1f26, lichtgrijs #e6e6e6, mint #5fd3b5 voor scores en acties, koraal #ff7a6b voor fouten; systeemletter
+   LAYOUT: smalle kop met klas en toets, één werkkolom, modeloplossing rechts; stapelt onder 900px */
+:root{color-scheme:dark;--bg:#1c1f26;--paper:#252a33;--paper2:#2d333e;--ink:#e6e6e6;--mute:#9aa1ac;--line:#3a414d;
+--mint:#5fd3b5;--mint-d:#173a33;--err:#ff7a6b;--err-bg:#3d2523;--warn:#f2c14e}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-x:clip;padding-bottom:env(safe-area-inset-bottom)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
+header{border-bottom:1px solid var(--line);padding:calc(12px + env(safe-area-inset-top)) max(4vw,14px) 0;background:var(--bg);position:sticky;top:0;z-index:5}
+.top{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+h1{font-size:clamp(24px,3vw,32px);line-height:1.05;margin:0;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+h1 i{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:8px;background:var(--mint);color:var(--bg);font-style:normal;font-size:17px;font-weight:800}
+.sel{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select,input[type=text],input[type=date],textarea{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:16px;min-height:44px}
+textarea{width:100%;min-height:120px;resize:vertical}
+.status{font-size:13px;color:var(--mute)}
+nav{display:flex;gap:4px;margin-top:10px;overflow-x:auto}
+nav button{flex:none;border:0;background:none;padding:10px 14px;min-height:44px;font-weight:600;color:var(--mute);border-bottom:3px solid transparent;white-space:nowrap}
+nav button[aria-current=true]{color:var(--ink);border-bottom-color:var(--mint)}
+main{padding:20px max(4vw,14px) 60px;max-width:1400px;margin:0 auto}
+h2{font-size:22px;margin:0 0 4px;line-height:1.2}
+h3{font-size:17px;margin:22px 0 8px}
+.sub{color:var(--mute);font-size:14px;margin:0 0 14px}
+.btn{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:8px 14px;min-height:44px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.btn.pri{background:var(--mint);color:#10241f;border-color:var(--mint)}
+.btn.red{color:var(--err);border-color:var(--err);background:none}
+.btn:disabled{opacity:.4;cursor:default}
+label.btn{position:relative;cursor:pointer}
+label.btn input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+.row-btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:none;padding:8px 14px;min-height:44px;font-weight:600}
+.seg button[aria-pressed=true]{background:var(--mint);color:#10241f}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 12px;min-height:40px;font-weight:600;font-size:14px;display:inline-flex;gap:6px;align-items:center}
+.chip small{font-weight:500;color:var(--mute);font-size:12px}
+.chip.done{border-color:var(--mint);color:var(--mint)}
+.chip[aria-pressed=true]{background:var(--mint);color:#10241f;border-color:var(--mint)}
+.chip[aria-pressed=true] small{color:inherit}
+.qhead{background:var(--paper);border-radius:12px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin-bottom:6px}
+.qhead b{font-size:19px}
+.meta{font-size:14px;color:var(--mute)}
+.rows{border-top:1px solid var(--line)}
+.r{display:grid;grid-template-columns:minmax(120px,1.1fr) auto minmax(0,2.4fr);gap:8px 14px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.with-opl .r{grid-template-columns:minmax(110px,1fr) auto}
+.with-opl .r .extra{grid-column:1/-1}
+.r.afw{opacity:.45}
+.r .nm{font-weight:600}
+.r .nm small{display:block;font-weight:500;color:var(--mute);font-size:13px}
+.score{display:flex;align-items:center;gap:4px}
+.score button{width:42px;height:44px;border:1px solid var(--line);background:var(--paper);border-radius:8px;font-weight:700;font-size:14px}
+.score input{width:66px;text-align:center;font-weight:800;font-size:19px;color:var(--mint);padding:6px;background:var(--paper2)}
+.score input.part{color:var(--warn)}
+.score .of{color:var(--mute);font-size:14px;white-space:nowrap;margin:0 4px}
+.extra{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.code{border:1px dashed var(--line);background:none;border-radius:6px;padding:5px 9px;min-height:38px;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.code em{font-style:normal;color:var(--err);font-weight:700}
+.code[aria-pressed=true]{border:1px solid var(--err);background:var(--err-bg);color:var(--err);font-weight:600}
+.extra input.opm{flex:1 1 180px;min-height:38px;font-size:14px;padding:5px 9px}
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
+.work{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
+.work.with-opl{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.opl{position:sticky;top:150px;background:var(--paper);border-radius:12px;padding:12px;max-height:calc(100vh - 170px);display:flex;flex-direction:column;gap:8px}
+.opl .view{overflow:auto;background:#fff;border-radius:6px;flex:1;min-height:300px}
+.opl canvas,.opl img{display:block;width:100%;height:auto}
+.card{background:var(--paper);border-radius:12px;padding:16px}
+pre.fb{white-space:pre-wrap;font:14px/1.5 system-ui,sans-serif;margin:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:8px 0 20px}
+.kpi{background:var(--paper);border-radius:12px;padding:14px 16px}
+.kpi b{display:block;font-size:clamp(26px,3.4vw,36px);line-height:1.1;font-weight:800}
+.kpi span{font-size:14px;color:var(--mute)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:13px;color:var(--mute);font-weight:600}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.low{color:var(--err);font-weight:700}
+.ok{color:var(--mint);font-weight:600}
+.bar{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr) 52px;gap:10px;align-items:center;padding:5px 0;font-size:14px}
+.bar .t{height:14px;background:var(--paper2);border-radius:7px;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--mint);border-radius:7px}
+.bar .t i.lo{background:var(--err)}.bar .t i.mid{background:var(--warn)}
+.bar .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:24px}
+.empty{background:var(--paper);border-radius:12px;padding:28px;text-align:center}
+.empty p{max-width:560px;margin:0 auto 14px}
+.note{font-size:14px;color:var(--mute);background:var(--paper);border-left:3px solid var(--mint);padding:10px 14px;border-radius:0 8px 8px 0;margin:10px 0 16px}
+.ed td{padding:4px}
+.ed input{width:100%;min-height:40px;font-size:15px}
+details{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:6px 0;background:var(--paper)}
+details summary{cursor:pointer;font-weight:600;min-height:32px}
+.lbl{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+.codeed{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,2fr) 76px 44px;gap:6px;margin:6px 0}
+.codeed input{min-height:40px;font-size:14px}
+.deeled{display:grid;grid-template-columns:60px minmax(0,2fr) 76px 64px 44px;gap:6px;margin:6px 0}
+.deeled input{min-height:40px;font-size:14px}
+.subbox{border-left:2px solid var(--line);padding-left:12px;margin:10px 0}
+.scroll{overflow-x:auto}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:18px;text-align:center}
+.drop.over{border-color:var(--mint);background:var(--mint-d)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin:18px 0}
+.tile{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px 20px;text-align:left;min-height:120px;display:flex;flex-direction:column;justify-content:space-between;gap:10px}
+.tile b{font-size:28px;line-height:1.1;font-weight:800}
+.tile span{color:var(--mute);font-size:14px}
+.tile[aria-current=true]{border-color:var(--mint);box-shadow:0 0 0 1px var(--mint) inset}
+.tile:hover{border-color:var(--mint)}
+.hero{padding:10px 0 0}
+.hero h2{font-size:clamp(28px,4vw,40px);line-height:1.1;font-weight:800;margin-bottom:6px}
+#copybox{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+#copybox>div{background:var(--paper);border-radius:12px;padding:18px;max-width:640px;width:100%}
+@media(max-width:900px){.work.with-opl{grid-template-columns:1fr}.opl{position:static;max-height:none}.opl .view{max-height:70vh}}
+@media(max-width:600px){
+ .r,.with-opl .r{grid-template-columns:1fr}
+ .cols{grid-template-columns:1fr}
+ .codeed{grid-template-columns:1fr 76px 44px}.codeed input:nth-child(2),.codeed input:nth-child(3){grid-column:1/-1}
+ .deeled{grid-template-columns:50px 1fr 64px 44px}.deeled input:nth-child(4){display:none}
+ .bar{grid-template-columns:minmax(0,1fr) 52px}.bar .t{grid-column:1/-1;order:3}
+ table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--mute)}.stack td:empty{display:none}
+}
+@media(prefers-reduced-motion:no-preference){.bar .t i{transition:width .4s ease}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1><i>Sk</i>Skoreboek</h1>
+    <div class="sel"><label for="ksel" class="status">Klas</label><select id="ksel"></select><label for="tsel" class="status">Toets</label><select id="tsel"></select><span class="status" id="status">Laden…</span></div>
+  </div>
+  <nav id="tabs">
+    <button data-tab="start">Klas kiezen</button>
+    <button data-tab="verbeter">Verbeteren</button>
+    <button data-tab="overzicht">Overzicht</button>
+    <button data-tab="skore">Naar Skore / Excel</button>
+    <button data-tab="klassen">Klassen</button>
+    <button data-tab="instel">Toetsen</button>
+    <button data-tab="gegevens">Back-up</button>
+  </nav>
+</header>
+<main id="main"><p class="sub">Laden…</p></main>
+<div id="copybox" role="dialog" aria-label="Tekst kopiëren"><div><h3 style="margin-top:0">Kopieer deze tekst</h3><p class="sub">Automatisch kopiëren lukte niet. Selecteer alles en kopieer.</p><textarea id="copyta" rows="10"></textarea><p><button class="btn pri" id="copyclose">Sluiten</button></p></div></div>
+<script>
+{
+const main=document.getElementById('main');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=x=>(Math.round((+x||0)*100)/100).toString().replace('.',',');
+const num=s=>{const n=+String(s??'').trim().replace(',','.');return Number.isFinite(n)?n:NaN};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const rid=()=>Math.random().toString(36).slice(2,9);
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+const norm=s=>String(s||'').trim().toLowerCase();
+const nkey=s=>norm(s).split(/\s+/).sort().join(' ');
+const ABC='abcdefghijklmnopqrstuvwxyz';
+
+let ready=false,lastSaved=null;
+const S={klassen:[],klasActief:null,toetsen:[],actief:null,laatsteBackup:null};
+const T={},BIJ={};
+const ui={tab:'start',modus:'vraag',vraag:null,lln:null,noemer:'',afr:0.5,delAsk:null,imp:null,impMsg:'',toonOpl:true,oplPage:1,oplVraag:null,editKlas:null,busyMsg:'',dataMsg:''};
+
+/* ---------- opslag op dit toestel ---------- */
+function setStatus(t){document.getElementById('status').textContent=t}
+const idb={p:null,
+ open(){return this.p||=new Promise((res,rej)=>{try{const r=indexedDB.open('skoreboek',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})},
+ async get(k){try{const d=await this.open();return await new Promise((res,rej)=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}catch(e){return null}},
+ async set(k,v){const d=await this.open();return new Promise((res,rej)=>{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}};
+const tijd=d=>new Date(d).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
+function pakData(){
+  const bij={};for(const [k,v] of Object.entries(BIJ))if(S.toetsen.some(x=>T[x.id]?.opl?.id===k))bij[k]=v;
+  return {app:'skoreboek',versie:2,bewaard:Date.now(),klassen:S.klassen,klasActief:S.klasActief,toetsen:S.toetsen.map(x=>T[x.id]).filter(Boolean),actief:S.actief,laatsteBackup:S.laatsteBackup,bijlagen:bij};
+}
+function normToets(t){
+  t.scores||={};t.afw||={};t.alg||={};
+  for(const v of t.vragen||[]){v.codes=(v.codes||[]).map(c=>({aftrek:0,...c}));v.delen=(v.delen||[]).map(d=>({...d,codes:(d.codes||[]).map(c=>({aftrek:0,...c}))}))}
+  return t;
+}
+function zetData(d){
+  if(!d||!Array.isArray(d.toetsen)||!Array.isArray(d.klassen))throw new Error('Dit is geen back-up van Skoreboek.');
+  for(const k of Object.keys(T))delete T[k];
+  S.klassen=d.klassen;S.klasActief=d.klassen.some(k=>k.id===d.klasActief)?d.klasActief:d.klassen[0]?.id||null;
+  S.toetsen=d.toetsen.map(t=>{T[t.id]=normToets(t);return {id:t.id,titel:t.titel}});
+  S.actief=d.actief&&T[d.actief]?d.actief:S.toetsen[0]?.id||null;S.laatsteBackup=d.laatsteBackup||null;
+  for(const [k,v] of Object.entries(d.bijlagen||{}))BIJ[k]=v;
+  for(const k of Object.keys(pdfDocs))delete pdfDocs[k];
+  lastSaved=d.bewaard||Date.now();ui.vraag=null;ui.lln=null;
+}
+let saveTimer=null,saving=false,again=false,persistAsked=false;
+function save(){clearTimeout(saveTimer);saveTimer=setTimeout(persist,600);setStatus('Opslaan…')}
+async function persist(){
+  if(saving){again=true;return}saving=true;
+  try{const d=pakData();await idb.set('data',d);lastSaved=d.bewaard;setStatus('Bewaard om '+tijd(lastSaved));
+    if(!persistAsked&&navigator.storage?.persist){persistAsked=true;try{await navigator.storage.persist()}catch(e){}}}
+  catch(e){setStatus('Opslaan mislukt: maak een back-up')}
+  finally{saving=false;if(again){again=false;persist()}}
+}
+async function init(){
+  render();
+  try{const d=await idb.get('data');if(d)zetData(d);setStatus(lastSaved?'Bewaard op dit toestel':'Nog niets bewaard')}
+  catch(e){setStatus('Opslag niet beschikbaar: maak back-ups')}
+  ready=true;
+  if(!S.actief&&S.toetsen.length)S.actief=S.toetsen[0].id;
+  ui.tab=S.klassen.length?'start':'klassen';
+  render();
+}
+function saveBlob(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}
+async function deelOfDownload(blob,name,btn){
+  try{const f=new File([blob],name,{type:blob.type});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return 'gedeeld'}}catch(e){if(e?.name==='AbortError')return 'geannuleerd'}
+  saveBlob(blob,name);return 'gedownload';
+}
+async function downloadBackup(btn,delen){
+  S.laatsteBackup=Date.now();const blob=new Blob([JSON.stringify(pakData())],{type:'application/json'}),name=`skoreboek-backup-${new Date().toISOString().slice(0,10)}.json`;
+  const r=delen?await deelOfDownload(blob,name):(saveBlob(blob,name),'gedownload');save();ui.dataMsg=r==='geannuleerd'?'':`Back-up ${r}.`;render();
+}
+async function leesBackup(f){
+  if(!f)return;
+  try{const d=JSON.parse(await f.text());zetData(d);await persist();ui.dataMsg=`Back-up ${f.name} ingeladen.`}
+  catch(e){ui.dataMsg=e?.message?.startsWith('Dit is geen')?e.message:'Dit bestand kon niet gelezen worden.'}
+  render();
+}
+
+/* ---------- model: vragen, deelvragen en scoorbare onderdelen ---------- */
+const act=()=>T[S.actief]||null;
+const klas=()=>S.klassen.find(k=>k.id===S.klasActief)||null;
+const L=()=>klas()?.lln||[];
+const vMax=v=>v.delen?.length?v.delen.reduce((a,d)=>a+(+d.max||0),0):(+v.max||0);
+function units(t){const out=[];for(const v of t.vragen){
+  if(v.delen?.length)for(const d of v.delen)out.push({key:v.id+'.'+d.id,v,d,nr:`${v.nr}${d.label}`,label:d.titel||v.label,max:+d.max||0,codes:d.codes,rem:v.rem,blz:d.blz||v.blz,module:v.module,lpd:v.lpd});
+  else out.push({key:v.id,v,d:null,nr:String(v.nr),label:v.label,max:+v.max||0,codes:v.codes,rem:v.rem,blz:v.blz,module:v.module,lpd:v.lpd});}return out}
+const unit=(t,k)=>units(t).find(u=>u.key===k);
+const maxT=t=>t.vragen.reduce((a,v)=>a+vMax(v),0);
+const mods=t=>[...new Set(t.vragen.map(v=>v.module||'–'))];
+const kort=m=>(m||'').split(' ')[0];
+const ent=(t,l,k)=>((t.scores[l]||={})[k]||={p:null,c:[],o:''});
+const pOf=(t,l,k)=>t.scores[l]?.[k]?.p;
+function tot(t,l){let s=0,n=0;const us=units(t);for(const u of us){const p=pOf(t,l,u.key);if(p!=null){s+=p;n++}}return{s,n,klaar:n===us.length,aantal:us.length}}
+function modS(t,l,m){let s=0,mx=0;for(const u of units(t))if((u.module||'–')===m){mx+=u.max;s+=pOf(t,l,u.key)||0}return{s,mx}}
+const aanwezig=t=>L().filter(x=>!t.afw?.[x.id]);
+const r4=x=>Math.round(x*4)/4;
+function setP(l,k,val){
+  const t=act(),u=unit(t,k);if(!u)return;
+  ent(t,l,k).p=(val===''||val==null||Number.isNaN(val))?null:Math.min(u.max,Math.max(0,r4(val)));
+  save();
+}
+function toggleCode(l,k,cid){
+  const t=act(),u=unit(t,k),c=u?.codes.find(x=>x.id===cid);if(!c)return;
+  const e=ent(t,l,k),i=e.c.indexOf(cid),a=+c.aftrek||0;
+  if(i<0){e.c.push(cid);if(a>0)e.p=Math.max(0,r4((e.p??u.max)-a))}
+  else{e.c.splice(i,1);if(a>0&&e.p!=null)e.p=Math.min(u.max,r4(e.p+a))}
+  save();
+}
+function feedback(t,l){
+  if(t.afw?.[l])return t.titel+': afwezig.';
+  const mx=maxT(t),{s}=tot(t,l),out=[`${t.titel}: ${nf(s)}/${nf(mx)} (${pct(s,mx)} %)`];
+  const ms=mods(t).map(m=>{const r=modS(t,l,m);return{m,...r,q:r.mx?r.s/r.mx:0}});
+  if(ms.length>1)out.push('Per onderdeel: '+ms.map(r=>`${kort(r.m)} ${nf(r.s)}/${nf(r.mx)}`).join(' · '));
+  const goed=ms.filter(r=>r.q>=.8);
+  if(goed.length&&ms.length>1)out.push('Sterk: '+goed.map(r=>r.m).join(', ')+'.');
+  const werk=[],rems=new Set();
+  for(const u of units(t)){
+    const e=t.scores[l]?.[u.key];if(!e)continue;
+    const cs=(e.c||[]).map(id=>u.codes.find(c=>c.id===id)).filter(Boolean);
+    for(const c of cs){werk.push(`• Vraag ${u.nr}: ${c.fb||c.label}`);if(c.rem)rems.add(c.rem)}
+    if(!cs.length&&e.p!=null&&u.max>0&&e.p/u.max<.5){werk.push(`• Vraag ${u.nr} (${u.label}): ${nf(e.p)}/${nf(u.max)}.`);if(u.rem)rems.add(u.rem)}
+    if(e.o)werk.push(`• Vraag ${u.nr}: ${e.o}`);
+  }
+  if(werk.length)out.push('Werkpunten:',...werk);
+  if(rems.size)out.push('Zo werk je eraan:',...[...rems].map(r=>'→ '+r));
+  if(t.alg?.[l])out.push(t.alg[l]);
+  return out.join('\n');
+}
+const noemer=t=>num(ui.noemer||maxT(t))||maxT(t);
+function skoreNum(t,l){if(t.afw?.[l])return null;const a=+ui.afr||.5;return maxT(t)?Math.round(tot(t,l).s/maxT(t)*noemer(t)/a)*a:0}
+const skoreScore=(t,l)=>{const n=skoreNum(t,l);return n==null?'':nf(n)};
+const mkCode=c=>({id:c.id||rid(),label:c.label||'',fb:c.fb||'',rem:c.rem||'',aftrek:num(c.aftrek)>0?num(c.aftrek):0});
+function nieuweToets(def){
+  const id=(def.id||'toets')+'-'+rid();
+  const t={id,titel:def.titel||'Nieuwe toets',datum:def.datum||'',opl:null,
+    vragen:clone(def.vragen||[]).map((v,i)=>({id:v.id||'v'+(i+1),nr:v.nr??i+1,label:v.label||'',module:v.module||'',lpd:v.lpd||'',max:+v.max||1,blz:v.blz||'',rem:v.rem||'',codes:(v.codes||[]).map(mkCode),
+      delen:(v.delen||[]).map((d,j)=>({id:d.id||'d'+rid(),label:d.label||ABC[j],titel:d.titel||'',max:+d.max||1,blz:d.blz||'',codes:(d.codes||[]).map(mkCode)}))})),scores:{},afw:{},alg:{}};
+  T[id]=t;S.toetsen.push({id,titel:t.titel});S.actief=id;ui.vraag=null;save();return t;
+}
+
+/* ---------- klaslijsten inlezen ---------- */
+async function unzip(buf){
+  const u=new Uint8Array(buf),dv=new DataView(buf),dec=new TextDecoder();let e=u.length-22;
+  while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;
+  if(e<0)throw new Error('Geen geldig Excel-bestand');
+  const n=dv.getUint16(e+10,true),out={};let p=dv.getUint32(e+16,true);
+  for(let i=0;i<n;i++){
+    const m=dv.getUint16(p+10,true),cs=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
+    const name=dec.decode(u.subarray(p+46,p+46+nl)),st=lo+30+dv.getUint16(lo+26,true)+dv.getUint16(lo+28,true);
+    out[name]={m,raw:u.subarray(st,st+cs)};p+=46+nl+xl+cl;
+  }
+  return {names:Object.keys(out),async text(name){const f=out[name];if(!f)return null;if(f.m===0)return dec.decode(f.raw);
+    if(typeof DecompressionStream==='undefined')throw new Error('Deze browser kan geen Excel lezen; gebruik CSV of plak de lijst');
+    return await new Response(new Blob([f.raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()}};
+}
+async function readXlsx(buf){
+  const zip=await unzip(buf),P=new DOMParser(),ss=[],ssx=await zip.text('xl/sharedStrings.xml');
+  if(ssx){const d=P.parseFromString(ssx,'application/xml');for(const si of d.getElementsByTagName('si'))ss.push([...si.getElementsByTagName('t')].map(x=>x.textContent).join(''))}
+  const sheets=zip.names.filter(f=>/^xl\/worksheets\/sheet\d+\.xml$/.test(f)).sort((a,b)=>parseInt(a.match(/\d+/))-parseInt(b.match(/\d+/))),out=[];
+  for(const f of sheets){
+    const d=P.parseFromString(await zip.text(f),'application/xml'),rows=[];
+    for(const row of d.getElementsByTagName('row')){const r=[];
+      for(const c of row.getElementsByTagName('c')){
+        const ref=c.getAttribute('r')||'',col=ref.replace(/\d+/g,'').split('').reduce((a,ch)=>a*26+ch.charCodeAt(0)-64,0)-1,ty=c.getAttribute('t'),v=c.getElementsByTagName('v')[0]?.textContent??'';
+        r[col<0?r.length:col]=ty==='s'?ss[+v]:ty==='inlineStr'?[...c.getElementsByTagName('t')].map(x=>x.textContent).join(''):v;}
+      rows.push([...r].map(x=>x??''));}
+    out.push(rows);
+  }
+  return out;
+}
+function readCsv(txt){
+  const lines=txt.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+  const d=lines.some(l=>l.includes('\t'))?'\t':lines.some(l=>l.includes(';'))?';':lines.some(l=>l.includes(','))&&lines.every(l=>l.split(',').length<5)?',':null;
+  return lines.map(l=>d?l.split(d).map(c=>c.replace(/^"|"$/g,'').trim()):[l.trim()]);
+}
+function rowsToLln(rows,fallback){
+  rows=rows.map(r=>r.map(c=>String(c??'').trim())).filter(r=>r.some(Boolean));
+  const out=[],hi=rows.findIndex(r=>r.some(c=>/^(naam|achternaam|familienaam|voornaam|leerling|volledige naam)$/i.test(c)));
+  if(hi>=0){
+    const h=rows[hi].map(norm),f=re=>h.findIndex(c=>re.test(c));
+    const iV=f(/^voornaam$/),iA=f(/^(achternaam|familienaam|naam)$/),iL=f(/^(leerling|volledige naam)$/),iK=f(/^(klas|klasgroep|klascode|groep)$/);
+    for(const r of rows.slice(hi+1)){const naam=iL>=0&&r[iL]?r[iL]:[r[iA],r[iV]].filter(Boolean).join(' ');if(naam)out.push({klas:(iK>=0&&r[iK])||fallback,naam})}
+  }else for(const r of rows){const c=r.filter(Boolean);if(!c.length)continue;
+    if(c.length>=2&&/^\d\s?[a-z]/i.test(c[0])&&c[0].length<=10)out.push({klas:c[0],naam:c.slice(1).filter(x=>!/^\d+$/.test(x)).join(' ')});
+    else out.push({klas:fallback,naam:c.filter(x=>!/^\d+$/.test(x)).join(' ')});}
+  return out.filter(x=>x.naam);
+}
+function groepeer(items){const m=new Map();for(const x of items){const k=x.klas||'Klas zonder naam';if(!m.has(k))m.set(k,[]);if(!m.get(k).includes(x.naam))m.get(k).push(x.naam)}return [...m].map(([klas,lln])=>({klas,lln}))}
+async function importFiles(files){
+  const fb=document.getElementById('impklas')?.value.trim();let items=[];ui.impMsg='Bestanden lezen…';render();
+  try{for(const f of files){const base=f.name.replace(/\.[^.]+$/,'').trim();
+      if(/\.xlsx$/i.test(f.name)){const sh=await readXlsx(await f.arrayBuffer());sh.forEach((rows,i)=>items.push(...rowsToLln(rows,fb||(sh.length>1?base+' '+(i+1):base))))}
+      else items.push(...rowsToLln(readCsv(await f.text()),fb||base));}
+    ui.imp=groepeer(items);ui.impMsg=ui.imp.length?'':'Geen leerlingen gevonden in deze bestanden.';}
+  catch(e){ui.impMsg='Inlezen mislukt: '+(e.message||'onbekend bestand')+'. Probeer .xlsx of .csv, of plak de lijst.'}
+  render();
+}
+function bewaarImport(){
+  for(const g of ui.imp||[]){let k=S.klassen.find(x=>norm(x.naam)===norm(g.klas));
+    if(!k){k={id:'k'+rid(),naam:g.klas,lln:[]};S.klassen.push(k)}
+    k.lln=g.lln.map(n=>k.lln.find(x=>nkey(x.naam)===nkey(n))||{id:'l'+rid(),naam:n});}
+  if(!S.klasActief&&S.klassen[0])S.klasActief=S.klassen[0].id;
+  ui.impMsg=`${ui.imp.length} klas${ui.imp.length===1?'':'sen'} bijgewerkt.`;ui.imp=null;save();render();
+}
+
+/* ---------- Excel maken ---------- */
+const xesc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'');
+const colL=i=>{let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
+function sheetXml(rows,widths){
+  const cols=widths?`<cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>`:'';
+  const body=rows.map((r,ri)=>`<row r="${ri+1}">${r.map((v,ci)=>{const ref=colL(ci)+(ri+1),st=ri===0?' s="1"':typeof v==='string'&&v.includes('\n')?' s="2"':'';
+    if(v==null||v==='')return '';if(typeof v==='number')return `<c r="${ref}"${st}><v>${v}</v></c>`;
+    return `<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${xesc(v)}</t></is></c>`}).join('')}</row>`).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>${cols}<sheetData>${body}</sheetData></worksheet>`;
+}
+const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=u=>{let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRCT[(c^u[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
+function zipStore(files,type){
+  const enc=new TextEncoder(),parts=[],central=[];let off=0;
+  for(const f of files){const nm=enc.encode(f.name),d=enc.encode(f.data),crc=crc32(d);
+    const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(12,0x21,true);h.setUint32(14,crc,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,nm.length,true);
+    parts.push(new Uint8Array(h.buffer),nm,d);
+    const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(14,0x21,true);c.setUint32(16,crc,true);c.setUint32(20,d.length,true);c.setUint32(24,d.length,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+    central.push(new Uint8Array(c.buffer),nm);off+=30+nm.length+d.length;}
+  const cd=central.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cd,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...central,new Uint8Array(e.buffer)],{type});
+}
+function buildXlsx(sheets){
+  const ns='http://schemas.openxmlformats.org',X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',f=[];
+  f.push({name:'[Content_Types].xml',data:`${X}<Types xmlns="${ns}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`});
+  f.push({name:'_rels/.rels',data:`${X}<Relationships xmlns="${ns}/package/2006/relationships"><Relationship Id="rId1" Type="${ns}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`});
+  f.push({name:'xl/workbook.xml',data:`${X}<workbook xmlns="${ns}/spreadsheetml/2006/main" xmlns:r="${ns}/officeDocument/2006/relationships"><sheets>${sheets.map((s,i)=>`<sheet name="${xesc(s.name.slice(0,31))}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`});
+  f.push({name:'xl/_rels/workbook.xml.rels',data:`${X}<Relationships xmlns="${ns}/package/2006/relationships">${sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="${ns}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length+1}" Type="${ns}/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`});
+  f.push({name:'xl/styles.xml',data:`${X}<styleSheet xmlns="${ns}/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`});
+  sheets.forEach((s,i)=>f.push({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXml(s.rows,s.widths)}));
+  return zipStore(f,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+async function exportExcel(btn){
+  const t=act(),k=klas(),mx=maxT(t),ms=mods(t),us=units(t);
+  const sk=[['Klas','Leerling','Score','Op','Feedback']];
+  for(const x of L())sk.push([k.naam,x.naam,skoreNum(t,x.id),noemer(t),feedback(t,x.id)]);
+  const det=[['Leerling',...us.map(u=>'V'+u.nr+' /'+nf(u.max)),...ms.map(m=>kort(m)+' /'+nf(modS(t,'',m).mx)),'Totaal /'+nf(mx),'%','Foutcodes']];
+  for(const x of L()){if(t.afw?.[x.id]){det.push([x.naam,'afwezig']);continue}
+    const r=tot(t,x.id);det.push([x.naam,...us.map(u=>pOf(t,x.id,u.key)??''),...ms.map(m=>modS(t,x.id,m).s),r.s,pct(r.s,mx),
+      us.flatMap(u=>(t.scores[x.id]?.[u.key]?.c||[]).map(c=>`V${u.nr}: ${u.codes.find(z=>z.id===c)?.label||''}`)).join('; ')])}
+  const fn=`${t.titel} ${k.naam}`.replace(/[\\/:*?"<>|]+/g,'').trim()+'.xlsx',o=btn.textContent;
+  try{const r=await deelOfDownload(buildXlsx([{name:'Skore',rows:sk,widths:[10,28,9,6,90]},{name:'Detail per vraag',rows:det,widths:[28,...us.map(()=>8),...ms.map(()=>9),10,6,60]}]),fn);btn.textContent=r==='geannuleerd'?'Geannuleerd':'Excel '+r+' ✓'}
+  catch(e){btn.textContent='Excel maken mislukt'}
+  setTimeout(()=>btn.textContent=o,2500);
+}
+
+/* ---------- modeloplossing ---------- */
+let pdfLib=null,drawSeq=0;const pdfDocs={};
+function b64bytes(b){const bin=atob(b),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u}
+async function getPdf(id){
+  if(!pdfLib){pdfLib=await import('./pdfjs/pdf.min.mjs');pdfLib.GlobalWorkerOptions.workerSrc='./pdfjs/pdf.worker.min.mjs'}
+  return pdfDocs[id]||=pdfLib.getDocument({data:b64bytes(BIJ[id].b64),isEvalSupported:false}).promise;
+}
+async function drawOpl(){
+  const t=act(),box=document.getElementById('oplview');if(!t?.opl||!box)return;
+  const b=BIJ[t.opl.id];if(!b){box.innerHTML='<p class="sub" style="padding:12px;color:#444">Het bestand van deze modeloplossing ontbreekt. Voeg het opnieuw toe bij Toetsen.</p>';return}
+  if(!/pdf/.test(b.type)){box.innerHTML=`<img src="data:${b.type};base64,${b.b64}" alt="Modeloplossing">`;return}
+  const seq=++drawSeq;
+  try{const doc=await getPdf(t.opl.id);ui.oplPage=Math.min(Math.max(1,ui.oplPage),doc.numPages);
+    const pi=document.getElementById('oplpage');if(pi)pi.textContent=`blz ${ui.oplPage} / ${doc.numPages}`;
+    const page=await doc.getPage(ui.oplPage);if(seq!==drawSeq)return;
+    const w=box.clientWidth||600,dpr=window.devicePixelRatio||1,vp0=page.getViewport({scale:1}),vp=page.getViewport({scale:w/vp0.width*dpr});
+    const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
+    await page.render({canvasContext:c.getContext('2d'),viewport:vp,canvas:c}).promise;
+    if(seq!==drawSeq)return;box.innerHTML='';box.appendChild(c);
+  }catch(e){box.innerHTML='<p class="sub" style="padding:12px;color:#444">De PDF kan niet getoond worden.</p>'}
+}
+const fileB64=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(',')[1]||'');fr.onerror=rej;fr.readAsDataURL(f)});
+function verwijderOplData(o){if(o&&!Object.values(T).some(x=>x.opl?.id===o.id))delete BIJ[o.id]}
+async function uploadOpl(file){
+  const t=act();if(!t||!file)return;
+  if(file.size>15e6){ui.busyMsg='Bestand te groot (max 15 MB).';render();return}
+  const type=/\.pdf$/i.test(file.name)||file.type==='application/pdf'?'application/pdf':/\.png$/i.test(file.name)?'image/png':/\.webp$/i.test(file.name)?'image/webp':'image/jpeg';
+  ui.busyMsg='Modeloplossing toevoegen…';render();
+  try{const b64=await fileB64(file),id='b'+rid(),old=t.opl;BIJ[id]={type,naam:file.name,b64};t.opl={id,type,naam:file.name};verwijderOplData(old);
+    ui.oplPage=1;ui.oplVraag=null;ui.busyMsg='Modeloplossing toegevoegd.';save()}
+  catch(e){ui.busyMsg='Toevoegen mislukt.'}
+  render();
+}
+
+/* ---------- weergave ---------- */
+function render(){
+  const tsel=document.getElementById('tsel'),ksel=document.getElementById('ksel');
+  tsel.innerHTML=S.toetsen.length?S.toetsen.map(t=>`<option value="${esc(t.id)}"${t.id===S.actief?' selected':''}>${esc(T[t.id]?.titel||t.titel)}</option>`).join(''):'<option>Nog geen toets</option>';
+  tsel.disabled=!S.toetsen.length;
+  ksel.innerHTML=S.klassen.length?S.klassen.map(k=>`<option value="${esc(k.id)}"${k.id===S.klasActief?' selected':''}>${esc(k.naam)} (${k.lln.length})</option>`).join(''):'<option>Nog geen klas</option>';
+  ksel.disabled=!S.klassen.length;
+  for(const b of document.querySelectorAll('#tabs button'))b.setAttribute('aria-current',b.dataset.tab===ui.tab);
+  if(!ready){main.innerHTML='<p class="sub">Je gegevens worden geladen…</p>';return}
+  const t=act();
+  if(['verbeter','overzicht','skore'].includes(ui.tab)&&(!t||!L().length)){main.innerHTML=leeg(t);return}
+  main.innerHTML=ui.tab==='start'?vStart():ui.tab==='verbeter'?vVerbeter(t):ui.tab==='overzicht'?vOverzicht(t):ui.tab==='skore'?vSkore(t):ui.tab==='klassen'?vKlassen():ui.tab==='gegevens'?vGegevens():vInstel();
+  if(ui.tab==='verbeter'&&t?.opl&&ui.toonOpl&&ui.modus==='vraag'){const u=unit(t,ui.vraag);if(ui.oplVraag!==ui.vraag){ui.oplVraag=ui.vraag;if(u?.blz)ui.oplPage=+u.blz}drawOpl()}
+}
+function vStart(){
+  if(!S.klassen.length)return leeg(act());
+  const t=act();
+  return `<div class="hero"><h2>Met welke klas ben je bezig?</h2><p class="sub">Kies een klas om te beginnen. Je kan later altijd wisselen bovenaan.</p></div>
+  <div class="tiles">${S.klassen.map(k=>{const n=t?k.lln.filter(x=>!t.afw?.[x.id]&&tot(t,x.id).klaar).length:0;
+    return `<button class="tile" data-act="startklas" data-id="${k.id}" aria-current="${k.id===S.klasActief}"><b>${esc(k.naam)}</b><span>${k.lln.length} leerlingen${t?` · ${n} verbeterd voor ${esc(t.titel)}`:''}</span></button>`}).join('')}</div>
+  ${S.toetsen.length?`<div class="row-btns"><label class="status" for="starttoets">Toets</label><select id="starttoets">${S.toetsen.map(x=>`<option value="${esc(x.id)}"${x.id===S.actief?' selected':''}>${esc(T[x.id]?.titel)}</option>`).join('')}</select></div>`:'<p class="note">Je hebt nog geen toets. Maak er een bij <b>Toetsen</b>.</p>'}
+  ${S.laatsteBackup&&Date.now()-S.laatsteBackup<7*864e5?'':`<p class="note">${S.laatsteBackup?'Je laatste back-up is meer dan een week oud.':'Je hebt nog geen back-up gemaakt.'} Je gegevens staan alleen op dit toestel. <button class="btn" data-act="tab" data-id="gegevens" style="margin-left:6px">Back-up maken</button></p>`}`;
+}
+function leeg(t){
+  return `<div class="empty"><h2>Eerst even instellen</h2>
+  ${!S.klassen.length?`<p>Laad je klaslijsten in bij <b>Klassen</b>: kies de Excel-lijsten uit Smartschool of plak ze.</p>`:''}
+  ${!t?`<p>Er is nog geen toets. Maak er een bij <b>Toetsen</b>, of laad een back-up in.</p>`:''}
+  <div class="row-btns" style="justify-content:center">
+   ${!S.klassen.length?'<button class="btn pri" data-act="tab" data-id="klassen">Naar Klassen</button>':''}${!t?'<button class="btn" data-act="tab" data-id="instel">Naar Toetsen</button>':''}<button class="btn" data-act="tab" data-id="gegevens">Back-up inladen</button></div></div>`;
+}
+function scoreCtl(t,l,u){
+  const p=pOf(t,l,u.key),part=p!=null&&p<u.max;
+  return `<div class="score"><button data-act="dec" data-l="${l}" data-k="${u.key}" aria-label="min een half punt">−½</button><input class="sc${part?' part':''}" inputmode="decimal" data-l="${l}" data-k="${u.key}" value="${p==null?'':nf(p)}" aria-label="score"><button data-act="inc" data-l="${l}" data-k="${u.key}" aria-label="plus een half punt">+½</button><span class="of">/ ${nf(u.max)}</span><button data-act="zero" data-l="${l}" data-k="${u.key}" aria-label="nul punten">0</button><button data-act="max" data-l="${l}" data-k="${u.key}" aria-label="alle punten">✓</button></div>`;
+}
+function extraCtl(t,l,u){
+  const e=t.scores[l]?.[u.key]||{c:[],o:''};
+  return `<div class="extra">${u.codes.map(c=>`<button class="code" data-act="code" data-l="${l}" data-k="${u.key}" data-c="${esc(c.id)}" aria-pressed="${(e.c||[]).includes(c.id)}" title="${esc(c.fb)}">${esc(c.label)}${+c.aftrek>0?`<em>−${nf(c.aftrek)}</em>`:''}</button>`).join('')}<input class="opm" type="text" data-l="${l}" data-k="${u.key}" value="${esc(e.o||'')}" placeholder="eigen opmerking"></div>`;
+}
+const rid2=(l,k)=>`r-${l}-${k.replace('.','_')}`;
+function rowQ(t,l,u){const ll=L().find(x=>x.id===l),a=t.afw?.[l];
+  return `<div class="r${a?' afw':''}" id="${rid2(l,u.key)}"><div class="nm">${esc(ll?.naam)}${a?'<small>afwezig</small>':''}</div>${a?'<div></div>':scoreCtl(t,l,u)+extraCtl(t,l,u)}</div>`}
+function rowL(t,l,u){return `<div class="r" id="${rid2(l,u.key)}"><div class="nm">Vraag ${esc(u.nr)}<small>${esc(u.label)}</small></div>${scoreCtl(t,l,u)}${extraCtl(t,l,u)}</div>`}
+function chipsQ(t){
+  const ll=aanwezig(t);
+  return `<div class="chips" role="group" aria-label="Vragen">${units(t).map(u=>{const n=ll.filter(x=>pOf(t,x.id,u.key)!=null).length;
+   return `<button class="chip${n===ll.length&&n?' done':''}" data-act="vraag" data-id="${u.key}" aria-pressed="${u.key===ui.vraag}">V${esc(u.nr)} <small>${n}/${ll.length}</small></button>`}).join('')}</div>`;
+}
+function oplPanel(t){
+  if(!t.opl)return `<aside class="opl"><b>Modeloplossing</b><p class="sub" style="margin:0">Voeg de modeloplossing toe (PDF of foto). Ze verschijnt hier naast je verbeterlijst, op de juiste pagina per vraag.</p>
+   <div class="row-btns"><label class="btn pri">PDF of foto kiezen<input type="file" id="oplfile" accept="application/pdf,image/*"></label><button class="btn" data-act="verberg">Verbergen</button></div>${ui.busyMsg?`<p class="sub">${esc(ui.busyMsg)}</p>`:''}</aside>`;
+  const pdf=/pdf/.test(t.opl.type);
+  return `<aside class="opl"><div class="row-btns" style="justify-content:space-between"><b>Modeloplossing</b>${pdf?`<span class="row-btns"><button class="btn" data-act="pprev" aria-label="vorige pagina">‹</button><span class="meta" id="oplpage">blz ${ui.oplPage}</span><button class="btn" data-act="pnext" aria-label="volgende pagina">›</button></span>`:''}</div>
+   <div class="view" id="oplview"><p class="sub" style="padding:12px;color:#444">Laden…</p></div>
+   <div class="row-btns">${pdf&&unit(t,ui.vraag)?`<button class="btn" data-act="koppel">Koppel deze pagina aan V${esc(unit(t,ui.vraag).nr)}</button>`:''}<button class="btn" data-act="verberg">Verbergen</button></div></aside>`;
+}
+function vVerbeter(t){
+  const us=units(t);
+  if(!ui.vraag||!us.find(u=>u.key===ui.vraag))ui.vraag=us[0]?.key;
+  if(!ui.lln||!L().find(x=>x.id===ui.lln))ui.lln=L()[0]?.id;
+  const seg=`<div class="row-btns"><div class="seg" role="group" aria-label="Modus"><button data-act="modus" data-id="vraag" aria-pressed="${ui.modus==='vraag'}">Per vraag</button><button data-act="modus" data-id="lln" aria-pressed="${ui.modus==='lln'}">Per leerling</button></div>${ui.modus==='vraag'&&!ui.toonOpl?'<button class="btn" data-act="toon">Modeloplossing tonen</button>':''}<span class="meta">${esc(klas().naam)} · ${esc(t.titel)}</span></div>`;
+  if(!us.length)return seg+'<p class="note">Deze toets heeft nog geen vragen. Voeg ze toe bij Toetsen.</p>';
+  if(ui.modus==='vraag'){
+    const u=us.find(x=>x.key===ui.vraag),wo=ui.toonOpl,i=us.indexOf(u);
+    return `${seg}${chipsQ(t)}<div class="work${wo?' with-opl':''}"><div><div class="qhead"><b>Vraag ${esc(u.nr)}: ${esc(u.label)}</b><span class="meta">${esc(u.module||'–')} · LPD ${esc(u.lpd||'–')} · max ${nf(u.max)}${u.blz?' · blz '+esc(u.blz):''}</span></div>
+    <p class="sub">Typ een score en druk op Enter voor de volgende leerling. Een foutcode met aftrek past de score meteen aan.</p>
+    <div class="rows">${L().map(x=>rowQ(t,x.id,u)).join('')}</div>
+    <div class="row-btns" style="margin-top:14px"><button class="btn" data-act="qprev" ${i<=0?'disabled':''}>← Vorige vraag</button><button class="btn pri" data-act="qnext" ${i>=us.length-1?'disabled':''}>Volgende vraag →</button></div></div>${wo?oplPanel(t):''}</div>`;
+  }
+  const lln=L(),i=lln.findIndex(x=>x.id===ui.lln),l=ui.lln,ts=tot(t,l);
+  return `${seg}<div class="row-btns" style="margin:12px 0"><button class="btn" data-act="lprev" ${i<=0?'disabled':''}>← Vorige</button>
+   <select id="llsel" aria-label="Leerling">${lln.map(x=>`<option value="${x.id}"${x.id===l?' selected':''}>${esc(x.naam)}</option>`).join('')}</select>
+   <button class="btn" data-act="lnext" ${i>=lln.length-1?'disabled':''}>Volgende →</button>
+   <label class="chip"><input type="checkbox" data-act="afw" ${t.afw?.[l]?'checked':''}> afwezig</label></div>
+  <div class="cols"><div><div class="qhead"><b id="ltot">${nf(ts.s)} / ${nf(maxT(t))}</b><span class="meta" id="lmeta">${ts.n} van ${ts.aantal} onderdelen gescoord</span></div>
+   <div class="rows">${t.afw?.[l]?'<p class="sub" style="padding:12px 0">Afwezig: geen scores nodig.</p>':us.map(u=>rowL(t,l,u)).join('')}</div></div>
+   <div class="card"><h3 style="margin-top:0">Feedback voor Skore</h3><pre class="fb" id="fbprev">${esc(feedback(t,l))}</pre>
+   <label class="lbl" for="alg">Algemene opmerking (komt onderaan)</label><textarea id="alg" rows="3" style="min-height:80px">${esc(t.alg?.[l]||'')}</textarea>
+   <p class="row-btns" style="margin:10px 0 0"><button class="btn pri" data-act="copyfb" data-l="${l}">Kopieer feedback</button></p></div></div>`;
+}
+function barRow(lbl,q){const c=q<50?'lo':q<70?'mid':'';return `<div class="bar"><span>${lbl}</span><span class="t"><i class="${c}" style="width:${q}%"></i></span><span class="v">${q}%</span></div>`}
+function vOverzicht(t){
+  const ll=aanwezig(t),mx=maxT(t),us=units(t),klaar=ll.filter(x=>tot(t,x.id).klaar);
+  const avg=klaar.length?klaar.reduce((a,x)=>a+tot(t,x.id).s,0)/klaar.length:0;
+  const uq=us.map(u=>{const ps=ll.map(x=>pOf(t,x.id,u.key)).filter(p=>p!=null);return{u,q:ps.length&&u.max?Math.round(ps.reduce((a,b)=>a+b,0)/ps.length/u.max*100):null}});
+  const scored=uq.filter(x=>x.q!=null),zwak=scored.slice().sort((a,b)=>a.q-b.q)[0],onder=klaar.filter(x=>tot(t,x.id).s/mx<.5).length;
+  const lpd={};for(const x of scored)for(const k of String(x.u.lpd||'').split(',').map(s=>s.trim()).filter(Boolean)){(lpd[k]||=[0,0]);for(const l of ll){const p=pOf(t,l.id,x.u.key);if(p!=null){lpd[k][0]+=p;lpd[k][1]+=x.u.max}}}
+  const codes=[];for(const u of us)for(const c of u.codes){const n=ll.filter(x=>(t.scores[x.id]?.[u.key]?.c||[]).includes(c.id)).length;if(n)codes.push({u,c,n})}
+  codes.sort((a,b)=>b.n-a.n);const ms=mods(t);
+  return `<h2>${esc(t.titel)} · ${esc(klas().naam)}</h2><p class="sub">${klaar.length} van ${ll.length} leerlingen volledig verbeterd${L().length-ll.length?` · ${L().length-ll.length} afwezig`:''}.</p>
+  <div class="kpis"><div class="kpi"><b>${klaar.length?pct(avg,mx)+' %':'–'}</b><span>klasgemiddelde (${nf(Math.round(avg*10)/10)}/${nf(mx)})</span></div>
+  <div class="kpi"><b class="${onder?'low':''}">${klaar.length?onder:'–'}</b><span>leerlingen onder 50 %</span></div>
+  <div class="kpi"><b>${zwak?'V'+esc(zwak.u.nr):'–'}</b><span>${zwak?`zwakste vraag (${zwak.q} %): ${esc(zwak.u.label)}`:'zwakste vraag'}</span></div>
+  <div class="kpi"><b>${codes[0]?codes[0].n+'×':'–'}</b><span>${codes[0]?`meest gemaakte fout: ${esc(codes[0].c.label)} (V${esc(codes[0].u.nr)})`:'meest gemaakte fout'}</span></div></div>
+  <div class="grid2"><div><h3>Per vraag (klasgemiddelde)</h3>${scored.length?uq.map(x=>x.q==null?'':barRow(`V${esc(x.u.nr)} ${esc(x.u.label)}`,x.q)).join(''):'<p class="sub">Nog geen scores.</p>'}</div>
+  <div><h3>Per leerplandoel</h3>${Object.keys(lpd).length?Object.entries(lpd).map(([k,[s,m]])=>barRow('LPD '+esc(k),pct(s,m))).join(''):'<p class="sub">Nog geen scores of geen leerplandoelen ingevuld.</p>'}
+  <h3>Meest gemaakte fouten</h3>${codes.length?`<table><tbody>${codes.slice(0,10).map(x=>`<tr><td class="n">${x.n}×</td><td><b>${esc(x.c.label)}</b>${+x.c.aftrek>0?` <span class="low">−${nf(x.c.aftrek)}</span>`:''}<br><span class="meta">V${esc(x.u.nr)} · ${esc(x.c.rem)}</span></td></tr>`).join('')}</tbody></table>`:'<p class="sub">Nog geen foutcodes aangeduid.</p>'}</div></div>
+  <h3>Per leerling</h3><div class="scroll"><table class="stack"><thead><tr><th>Leerling</th>${ms.map(m=>`<th class="n">${esc(kort(m))}</th>`).join('')}<th class="n">Totaal</th><th class="n">%</th></tr></thead><tbody>
+  ${L().map(x=>{if(t.afw?.[x.id])return `<tr><td>${esc(x.naam)}</td>${ms.map(()=>'<td class="n">–</td>').join('')}<td class="n">afw.</td><td class="n"></td></tr>`;
+   const r=tot(t,x.id),q=pct(r.s,mx);return `<tr><td><button class="chip" data-act="openl" data-l="${x.id}">${esc(x.naam)}</button>${r.klaar?'':' <span class="meta">(onvolledig)</span>'}</td>${ms.map(m=>{const z=modS(t,x.id,m);return `<td class="n${z.mx&&z.s/z.mx<.5?' low':''}">${nf(z.s)}/${nf(z.mx)}</td>`}).join('')}<td class="n"><b>${nf(r.s)}</b></td><td class="n${q<50?' low':''}">${q}</td></tr>`}).join('')}</tbody></table></div>`;
+}
+function vSkore(t){
+  const mx=maxT(t),onv=L().filter(x=>!t.afw?.[x.id]&&!tot(t,x.id).klaar).length;
+  return `<h2>Naar Skore / Excel · ${esc(klas().naam)}</h2><p class="sub">De lijst volgt de volgorde van je klaslijst, dus dezelfde volgorde als in Smartschool.</p>
+  ${onv?`<p class="note"><b class="low">${onv} leerling${onv>1?'en zijn':' is'} nog niet volledig verbeterd.</b> Ontbrekende onderdelen tellen als 0.</p>`:''}
+  <div class="row-btns"><label class="status" for="noemer">Score op</label><input id="noemer" type="text" inputmode="decimal" style="width:90px" value="${esc(ui.noemer||mx)}">
+   <label class="status" for="afr">afronden op</label><select id="afr">${[1,.5,.1,.01].map(a=>`<option value="${a}"${+ui.afr===a?' selected':''}>${nf(a)}</option>`).join('')}</select></div>
+  <div class="row-btns" style="margin:14px 0"><button class="btn pri" data-act="excel">Excel (.xlsx) downloaden of delen</button><button class="btn" data-act="copyscores">Kopieer scorekolom</button><button class="btn" data-act="copyall">Kopieer tabel</button></div>
+  <p class="note">Het Excel-bestand heeft twee bladen. <b>Skore</b>: klas, leerling, score, noemer en feedback. <b>Detail per vraag</b>: scores per (deel)vraag, per module en de foutcodes. Op een tablet kan je het meteen delen naar OneDrive of Excel.</p>
+  <div class="scroll"><table class="stack"><thead><tr><th>Leerling</th><th class="n">Score</th><th>Feedback</th><th></th></tr></thead><tbody>
+  ${L().map(x=>{const f=feedback(t,x.id);return `<tr><td><b>${esc(x.naam)}</b>${tot(t,x.id).klaar||t.afw?.[x.id]?'':'<br><span class="meta low">onvolledig</span>'}</td><td class="n"><b>${t.afw?.[x.id]?'afw.':skoreScore(t,x.id)}</b></td><td><details><summary>${esc(f.split('\n')[0])}</summary><pre class="fb">${esc(f)}</pre></details></td><td><button class="btn" data-act="copyfb" data-l="${x.id}">Kopieer</button></td></tr>`}).join('')}
+  </tbody></table></div>`;
+}
+function vKlassen(){
+  const imp=ui.imp;
+  return `<div class="grid2"><div><h2>Klaslijsten inladen</h2><p class="sub">Kies de Excel- of CSV-lijsten uit Smartschool. Meerdere bestanden tegelijk mag: één bestand per klas, of één bestand met een kolom <i>Klas</i>.</p>
+   <div class="drop" id="drop"><p style="margin:0 0 10px"><b>Sleep bestanden hierheen</b> of</p><label class="btn pri">Bestanden kiezen<input type="file" id="klasfiles" multiple accept=".xlsx,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label></div>
+   <label class="lbl" for="impklas">Klasnaam, als de lijst geen kolom <i>Klas</i> heeft (anders de bestandsnaam)</label><input type="text" id="impklas" placeholder="bv. 4ECWE" style="width:100%">
+   <h3>Of plak een lijst</h3><p class="sub">Kolommen <i>Klas / Naam / Voornaam</i>, twee kolommen <i>klas – naam</i>, of één naam per regel (dan geldt de klasnaam hierboven).</p>
+   <textarea id="plak" rows="6" placeholder="4ECWE&#9;Peeters Anna&#10;4ECWE&#9;De Smet Ben"></textarea>
+   <p class="row-btns"><button class="btn" data-act="plak">Lijst lezen</button></p>
+   ${ui.impMsg?`<p class="${/mislukt|Geen/.test(ui.impMsg)?'low':'ok'}">${esc(ui.impMsg)}</p>`:''}
+   ${imp?`<div class="card"><b>Gevonden:</b><table><tbody>${imp.map(g=>{const ex=S.klassen.find(x=>norm(x.naam)===norm(g.klas));return `<tr><td><b>${esc(g.klas)}</b><br><span class="meta">${esc(g.lln.slice(0,3).join(', '))}${g.lln.length>3?' …':''}</span></td><td class="n">${g.lln.length} lln</td><td class="meta">${ex?'werkt bestaande klas bij':'nieuwe klas'}</td></tr>`}).join('')}</tbody></table>
+    <p class="row-btns" style="margin:10px 0 0"><button class="btn pri" data-act="bewaarimp">Klassen bewaren</button><button class="btn" data-act="annimp">Annuleren</button></p></div>`:''}</div>
+  <div><h2>Jouw klassen</h2>
+   ${S.klassen.length?`<table><tbody>${S.klassen.map(k=>`<tr><td><b>${esc(k.naam)}</b><br><span class="meta">${k.lln.length} leerlingen</span></td><td class="n"><button class="btn" data-act="editklas" data-id="${k.id}">Lijst</button> <button class="btn red" data-act="delklas" data-id="${k.id}">${ui.delAsk===k.id?'Zeker?':'Verwijder'}</button></td></tr>
+    ${ui.editKlas===k.id?`<tr><td colspan="2"><label class="lbl" for="klasnaam">Klasnaam</label><input type="text" id="klasnaam" value="${esc(k.naam)}" style="width:100%"><label class="lbl" for="klasta">Eén naam per regel, in de volgorde van Smartschool</label><textarea id="klasta" rows="10">${esc(k.lln.map(x=>x.naam).join('\n'))}</textarea><p class="row-btns"><button class="btn pri" data-act="bewaarklas" data-id="${k.id}">Bewaren</button><button class="btn" data-act="editklas" data-id="">Sluiten</button></p></td></tr>`:''}`).join('')}</tbody></table>`:'<p class="sub">Nog geen klassen.</p>'}
+   <p class="row-btns"><button class="btn" data-act="nieuweklas">+ Lege klas</button></p></div></div>`;
+}
+function vInstel(){
+  const t=act();
+  return `<div class="grid2"><div><h2>Toetsen</h2>
+   ${S.toetsen.length?`<table><tbody>${S.toetsen.map(x=>`<tr><td><b>${esc(T[x.id]?.titel)}</b><br><span class="meta">${esc(T[x.id]?.datum||'')} · ${T[x.id]?.vragen.length} vragen · /${nf(maxT(T[x.id]))}${T[x.id]?.opl?' · met modeloplossing':''}</span></td><td class="n"><button class="btn" data-act="kies" data-id="${x.id}">${x.id===S.actief?'Actief':'Kies'}</button> <button class="btn" data-act="dupliceer" data-id="${x.id}">Kopie</button> <button class="btn red" data-act="del" data-id="${x.id}">${ui.delAsk===x.id?'Zeker?':'Verwijder'}</button></td></tr>`).join('')}</tbody></table>`:'<p class="sub">Nog geen toetsen.</p>'}
+   <p class="row-btns" style="margin-top:12px"><button class="btn pri" data-act="nieuw">+ Nieuwe toets</button></p>
+   <p class="sub">Eén toets geldt voor al je klassen: je kiest de klas bij het starten.</p></div>
+   <div><h2>Toets importeren</h2><p class="sub">Plak een toets in JSON-vorm, bijvoorbeeld een toets die Claude voor je opstelde uit een tex-bestand. Deelvragen (<i>delen</i>) en aftrek (<i>aftrek</i>) worden mee ingelezen.</p>
+   <textarea id="impta" rows="5" placeholder='{"titel":"Toets 2","vragen":[{"nr":1,"label":"…","module":"M4","lpd":"19 C","delen":[{"label":"a","max":2,"codes":[{"label":"eenheid vergeten","fb":"…","rem":"…","aftrek":0.5}]}]}]}'></textarea>
+   <p class="row-btns"><button class="btn" data-act="import">Importeer als nieuwe toets</button><span id="impmsg" class="sub" style="margin:0"></span></p></div></div>
+  ${t?vEditor(t):''}`;
+}
+function codesEd(t,v,d){
+  const cs=d?d.codes:v.codes,ds=d?d.id:'';
+  return `<div class="subbox"><span class="lbl">Foutcodes${d?` voor ${esc(v.nr)}${esc(d.label)}`:''} — knop · zin voor de leerling · remediëring · aftrek</span>
+   ${cs.map(c=>`<div class="codeed"><input type="text" data-ed="code" data-v="${v.id}" data-d="${ds}" data-c="${esc(c.id)}" data-k="label" value="${esc(c.label)}" placeholder="naam op de knop" aria-label="Naam knop"><input type="text" data-ed="code" data-v="${v.id}" data-d="${ds}" data-c="${esc(c.id)}" data-k="fb" value="${esc(c.fb)}" placeholder="zin die de leerling leest" aria-label="Feedback"><input type="text" data-ed="code" data-v="${v.id}" data-d="${ds}" data-c="${esc(c.id)}" data-k="rem" value="${esc(c.rem)}" placeholder="remediëring" aria-label="Remediëring"><input type="text" inputmode="decimal" data-ed="code" data-v="${v.id}" data-d="${ds}" data-c="${esc(c.id)}" data-k="aftrek" value="${+c.aftrek?nf(c.aftrek):''}" placeholder="−0" aria-label="Aftrek in punten"><button class="btn red" data-act="delc" data-v="${v.id}" data-d="${ds}" data-c="${esc(c.id)}" aria-label="Code verwijderen">×</button></div>`).join('')}
+   <button class="btn" data-act="addc" data-v="${v.id}" data-d="${ds}">+ Foutcode</button></div>`;
+}
+function vEditor(t){
+  return `<h2 style="margin-top:28px">Toets bewerken: ${esc(t.titel)}</h2><p class="sub">Wijzigingen worden meteen bewaard. Totaal: <b>${nf(maxT(t))} punten</b>.</p>
+  <div class="row-btns"><input type="text" data-ed="toets" data-k="titel" value="${esc(t.titel)}" aria-label="Titel" style="flex:1 1 260px"><input type="date" data-ed="toets" data-k="datum" value="${esc(t.datum)}" aria-label="Datum"></div>
+  <h3>Modeloplossing</h3>
+  <div class="row-btns">${t.opl?`<span>📄 <b>${esc(t.opl.naam||'modeloplossing')}</b>${BIJ[t.opl.id]?'':' <span class="low">(bestand ontbreekt)</span>'}</span>`:'<span class="sub" style="margin:0">Nog geen modeloplossing.</span>'}
+   <label class="btn pri">${t.opl?'Vervangen':'PDF of foto kiezen'}<input type="file" id="oplfile" accept="application/pdf,image/*"></label>${t.opl?`<button class="btn red" data-act="oplweg">${ui.delAsk==='opl'?'Zeker?':'Verwijderen'}</button>`:''}</div>
+  ${ui.busyMsg?`<p class="sub">${esc(ui.busyMsg)}</p>`:''}<p class="sub">Tip: vul per vraag de pagina (Blz) in, of klik tijdens het verbeteren op <i>Koppel deze pagina</i>.</p>
+  <h3>Vragen</h3>
+  <div class="scroll"><table class="ed"><thead><tr><th>Nr</th><th>Omschrijving</th><th>Module</th><th>LPD</th><th>Max</th><th>Blz</th><th></th></tr></thead><tbody>
+  ${t.vragen.map(v=>{const hd=v.delen.length;return `<tr><td style="width:60px"><input type="text" data-ed="vraag" data-v="${v.id}" data-k="nr" value="${esc(v.nr)}" aria-label="Nummer"></td><td><input type="text" data-ed="vraag" data-v="${v.id}" data-k="label" value="${esc(v.label)}" aria-label="Omschrijving"></td><td><input type="text" data-ed="vraag" data-v="${v.id}" data-k="module" value="${esc(v.module)}" aria-label="Module" placeholder="bv. M3 Zouten"></td><td style="width:110px"><input type="text" data-ed="vraag" data-v="${v.id}" data-k="lpd" value="${esc(v.lpd)}" aria-label="LPD"></td><td style="width:72px"><input type="text" inputmode="decimal" data-ed="vraag" data-v="${v.id}" data-k="max" value="${nf(vMax(v))}" aria-label="Maximum" ${hd?'disabled title="Som van de deelvragen"':''}></td><td style="width:60px"><input type="text" inputmode="numeric" data-ed="vraag" data-v="${v.id}" data-k="blz" value="${esc(v.blz||'')}" aria-label="Pagina modeloplossing"></td><td style="width:52px"><button class="btn red" data-act="delv" data-v="${v.id}" aria-label="Vraag verwijderen">×</button></td></tr>`}).join('')}
+  </tbody></table></div><p><button class="btn" data-act="addv">+ Vraag</button></p>
+  <h3>Deelvragen, foutcodes en remediëring</h3><p class="sub">Open een vraag om deelvragen (a, b, c …) toe te voegen of foutcodes in te stellen. Een foutcode met aftrek trekt die punten automatisch af bij het aanklikken.</p>
+  ${t.vragen.map(v=>`<details data-v="${v.id}"${ui.openV===v.id?' open':''}><summary>Vraag ${esc(v.nr)}: ${esc(v.label||'(zonder omschrijving)')} <span class="meta">· ${v.delen.length?v.delen.length+' deelvragen':'geen deelvragen'} · ${(v.delen.length?v.delen.reduce((a,d)=>a+d.codes.length,0):v.codes.length)} foutcodes · max ${nf(vMax(v))}</span></summary>
+   <label class="lbl">Remediëring als de leerling onder de helft scoort zonder foutcode</label><input type="text" style="width:100%" data-ed="vraag" data-v="${v.id}" data-k="rem" value="${esc(v.rem)}" placeholder="bv. Herwerk werkbundel oxiden opgave 3">
+   <div class="subbox"><span class="lbl">Deelvragen — letter · omschrijving (optioneel) · max · blz</span>
+    ${v.delen.map(d=>`<div class="deeled"><input type="text" data-ed="deel" data-v="${v.id}" data-d="${d.id}" data-k="label" value="${esc(d.label)}" aria-label="Letter"><input type="text" data-ed="deel" data-v="${v.id}" data-d="${d.id}" data-k="titel" value="${esc(d.titel)}" placeholder="omschrijving" aria-label="Omschrijving"><input type="text" inputmode="decimal" data-ed="deel" data-v="${v.id}" data-d="${d.id}" data-k="max" value="${nf(d.max)}" aria-label="Maximum"><input type="text" inputmode="numeric" data-ed="deel" data-v="${v.id}" data-d="${d.id}" data-k="blz" value="${esc(d.blz||'')}" placeholder="blz" aria-label="Pagina"><button class="btn red" data-act="deld" data-v="${v.id}" data-d="${d.id}" aria-label="Deelvraag verwijderen">×</button></div>`).join('')}
+    <button class="btn" data-act="addd" data-v="${v.id}">+ Deelvraag</button>${v.delen.length?'':'<span class="meta" style="margin-left:8px">Zonder deelvragen scoor je de vraag als geheel.</span>'}</div>
+   ${v.delen.length?v.delen.map(d=>codesEd(t,v,d)).join(''):codesEd(t,v,null)}</details>`).join('')}
+  <h3>Exporteren</h3><p class="sub">Kopieer de toets (zonder scores) om hem te bewaren of opnieuw te gebruiken.</p><button class="btn" data-act="export">Kopieer toets als JSON</button>`;
+}
+function vGegevens(){
+  return `<h2>Back-up</h2><p class="sub">Skoreboek bewaart alles op dit toestel. Maak regelmatig een back-up, bijvoorbeeld na elke verbetersessie, en bewaar die in je OneDrive.</p>
+  ${ui.dataMsg?`<p class="ok">${esc(ui.dataMsg)}</p>`:''}
+  <div class="grid2"><div class="card"><h3 style="margin-top:0">Back-up maken</h3><p class="sub">${S.laatsteBackup?'Laatste back-up: '+new Date(S.laatsteBackup).toLocaleString('nl-BE',{dateStyle:'short',timeStyle:'short'}):'Nog geen back-up gemaakt.'}</p>
+   <div class="row-btns">${navigator.canShare?'<button class="btn pri" data-act="backupdeel">Back-up delen (naar OneDrive)</button>':''}<button class="btn${navigator.canShare?'':' pri'}" data-act="backup">Back-up downloaden</button></div></div>
+  <div class="card"><h3 style="margin-top:0">Back-up inladen</h3><p class="sub">Zet een back-up terug, of laad een export uit de online verbeterapp in. Dit vervangt wat nu op dit toestel staat.</p>
+   <label class="btn">Back-up kiezen<input type="file" id="backupfile" accept=".json,application/json"></label></div></div>`;
+}
+
+/* ---------- acties ---------- */
+function rerow(l,k){const t=act(),u=unit(t,k),el=document.getElementById(rid2(l,k));if(!el||!u)return;
+  el.outerHTML=ui.modus==='vraag'?rowQ(t,l,u):rowL(t,l,u);side()}
+function side(){const t=act();
+  if(ui.modus==='vraag'){const c=document.querySelector('.chips');if(c)c.outerHTML=chipsQ(t)}
+  else{const l=ui.lln,ts=tot(t,l),a=document.getElementById('ltot'),m=document.getElementById('lmeta'),f=document.getElementById('fbprev');
+   if(a)a.textContent=`${nf(ts.s)} / ${nf(maxT(t))}`;if(m)m.textContent=`${ts.n} van ${ts.aantal} onderdelen gescoord`;if(f)f.textContent=feedback(t,l)}}
+function focusSc(l,k){const el=document.querySelector(`input.sc[data-l="${l}"][data-k="${k}"]`);if(el){el.focus();el.select()}}
+async function copy(txt,btn){
+  try{await navigator.clipboard.writeText(txt);if(btn){const o=btn.textContent;btn.textContent='Gekopieerd ✓';setTimeout(()=>btn.textContent=o,1500)}}
+  catch(e){const b=document.getElementById('copybox'),ta=document.getElementById('copyta');ta.value=txt;b.style.display='flex';ta.focus();ta.select()}
+}
+const findV=(t,id)=>t.vragen.find(x=>x.id===id);
+const codeList=(t,vid,did)=>{const v=findV(t,vid);if(!v)return null;return did?v.delen.find(d=>d.id===did)?.codes:v.codes};
+document.getElementById('copyclose').addEventListener('click',()=>{document.getElementById('copybox').style.display='none'});
+document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ui.tab=b.dataset.tab;ui.delAsk=null;ui.busyMsg='';ui.dataMsg='';render()});
+document.getElementById('tsel').addEventListener('change',e=>{S.actief=e.target.value;ui.vraag=null;save();render()});
+document.getElementById('ksel').addEventListener('change',e=>{S.klasActief=e.target.value;ui.lln=null;save();render()});
+main.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-act]');if(!b||b.tagName==='INPUT')return;
+  const t=act(),{act:a,l,k,c,id}=b.dataset,v=b.dataset.v,d=b.dataset.d;
+  const u=t&&k?unit(t,k):null,cur=t&&l&&k?pOf(t,l,k):null;
+  switch(a){
+   case 'tab':ui.tab=id;render();break;
+   case 'startklas':S.klasActief=id;ui.lln=null;ui.tab=S.toetsen.length?'verbeter':'instel';save();render();scrollTo(0,0);break;
+   case 'modus':ui.modus=id;render();break;
+   case 'vraag':ui.vraag=id;render();break;
+   case 'qprev':case 'qnext':{const us=units(t),i=us.findIndex(x=>x.key===ui.vraag)+(a==='qnext'?1:-1);if(us[i])ui.vraag=us[i].key;render();scrollTo(0,0);break}
+   case 'lprev':case 'lnext':{const i=L().findIndex(x=>x.id===ui.lln)+(a==='lnext'?1:-1);ui.lln=L()[i]?.id||ui.lln;render();break}
+   case 'openl':ui.tab='verbeter';ui.modus='lln';ui.lln=l;render();scrollTo(0,0);break;
+   case 'dec':setP(l,k,(cur??u.max)-.5);rerow(l,k);break;
+   case 'inc':setP(l,k,(cur??0)+.5);rerow(l,k);break;
+   case 'zero':setP(l,k,0);rerow(l,k);break;
+   case 'max':setP(l,k,u.max);rerow(l,k);break;
+   case 'code':toggleCode(l,k,c);rerow(l,k);break;
+   case 'toon':ui.toonOpl=true;ui.oplVraag=null;render();break;
+   case 'verberg':ui.toonOpl=false;render();break;
+   case 'pprev':ui.oplPage--;drawOpl();break;
+   case 'pnext':ui.oplPage++;drawOpl();break;
+   case 'koppel':{const uu=unit(t,ui.vraag);if(uu){(uu.d||uu.v).blz=String(ui.oplPage);save();const o=b.textContent;b.textContent='Gekoppeld ✓';setTimeout(()=>b.textContent=o,1500)}break}
+   case 'oplweg':if(ui.delAsk!=='opl'){ui.delAsk='opl';render();break}{const o=t.opl;t.opl=null;ui.delAsk=null;verwijderOplData(o);save();render()}break;
+   case 'copyfb':copy(feedback(t,l),b);break;
+   case 'copyscores':copy(L().map(x=>skoreScore(t,x.id)).join('\n'),b);break;
+   case 'copyall':copy(['Leerling\tScore\tFeedback',...L().map(x=>[x.naam,skoreScore(t,x.id),'"'+feedback(t,x.id).replace(/"/g,'""')+'"'].join('\t'))].join('\n'),b);break;
+   case 'excel':exportExcel(b);break;
+   case 'backup':downloadBackup(b,false);break;
+   case 'backupdeel':downloadBackup(b,true);break;
+   case 'plak':{const fb=document.getElementById('impklas').value.trim()||'Klas zonder naam';ui.imp=groepeer(rowsToLln(readCsv(document.getElementById('plak').value),fb));ui.impMsg=ui.imp.length?'':'Geen namen gevonden.';render();break}
+   case 'bewaarimp':bewaarImport();break;
+   case 'annimp':ui.imp=null;ui.impMsg='';render();break;
+   case 'editklas':ui.editKlas=id||null;render();break;
+   case 'bewaarklas':{const kl=S.klassen.find(x=>x.id===id),names=document.getElementById('klasta').value.split('\n').map(s=>s.trim()).filter(Boolean);
+     kl.naam=document.getElementById('klasnaam').value.trim()||kl.naam;kl.lln=names.map(n=>kl.lln.find(x=>nkey(x.naam)===nkey(n))||{id:'l'+rid(),naam:n});ui.editKlas=null;save();render();break}
+   case 'nieuweklas':{const kl={id:'k'+rid(),naam:'Nieuwe klas',lln:[]};S.klassen.push(kl);S.klasActief=kl.id;ui.editKlas=kl.id;save();render();break}
+   case 'delklas':if(ui.delAsk!==id){ui.delAsk=id;render();break}
+     S.klassen=S.klassen.filter(x=>x.id!==id);if(S.klasActief===id)S.klasActief=S.klassen[0]?.id||null;ui.delAsk=null;save();render();break;
+   case 'kies':S.actief=id;ui.vraag=null;save();render();break;
+   case 'dupliceer':{const src=clone(T[id]);src.titel+=' (kopie)';const nt=nieuweToets({...src,id:src.id.split('-')[0]});nt.opl=src.opl;render();break}
+   case 'del':if(ui.delAsk!==id){ui.delAsk=id;render();break}
+     {const o=T[id]?.opl;delete T[id];S.toetsen=S.toetsen.filter(x=>x.id!==id);verwijderOplData(o);if(S.actief===id)S.actief=S.toetsen[0]?.id||null;ui.delAsk=null;save();render()}break;
+   case 'nieuw':nieuweToets({titel:'Nieuwe toets',vragen:[{nr:1,label:'',max:1}]});render();break;
+   case 'import':{const m=document.getElementById('impmsg');try{const dd=JSON.parse(document.getElementById('impta').value);if(!Array.isArray(dd.vragen))throw 0;nieuweToets(dd);render()}catch(err){m.textContent='Dit is geen geldige toets (JSON met een lijst "vragen").'}break}
+   case 'export':{const x=clone(t);delete x.scores;delete x.afw;delete x.alg;delete x.opl;copy(JSON.stringify(x,null,1),b);break}
+   case 'addv':{const n=t.vragen.length?Math.max(...t.vragen.map(x=>+x.nr||0))+1:1;t.vragen.push({id:'v'+rid(),nr:n,label:'',module:t.vragen.at(-1)?.module||'',lpd:'',max:1,blz:'',rem:'',codes:[],delen:[]});save();render();break}
+   case 'delv':t.vragen=t.vragen.filter(x=>x.id!==v);save();render();break;
+   case 'addd':{const q=findV(t,v);const first=!q.delen.length;q.delen.push({id:'d'+rid(),label:ABC[q.delen.length]||'?',titel:'',max:first?(+q.max||1):1,blz:'',codes:first?q.codes:[]});if(first)q.codes=[];ui.openV=v;save();render();break}
+   case 'deld':{const q=findV(t,v);q.delen=q.delen.filter(x=>x.id!==d);if(!q.delen.length)q.max=1;ui.openV=v;save();render();break}
+   case 'addc':codeList(t,v,d).push({id:rid(),label:'',fb:'',rem:'',aftrek:0});ui.openV=v;save();render();break;
+   case 'delc':{const q=findV(t,v),lst=codeList(t,v,d),i=lst.findIndex(x=>x.id===c);if(i>=0)lst.splice(i,1);ui.openV=v;save();render();break}
+  }
+});
+main.addEventListener('change',e=>{
+  const el=e.target,t=act();
+  if(el.classList.contains('sc')){setP(el.dataset.l,el.dataset.k,el.value.trim()===''?'':num(el.value));rerow(el.dataset.l,el.dataset.k);return}
+  if(el.id==='llsel'){ui.lln=el.value;render();return}
+  if(el.id==='starttoets'){S.actief=el.value;ui.vraag=null;save();render();return}
+  if(el.id==='klasfiles'){importFiles([...el.files]);return}
+  if(el.id==='oplfile'){uploadOpl(el.files[0]);return}
+  if(el.id==='backupfile'){leesBackup(el.files[0]);return}
+  if(el.dataset.act==='afw'){(t.afw||={})[ui.lln]=el.checked;save();render();return}
+  if(el.id==='noemer'){ui.noemer=el.value;render();return}
+  if(el.id==='afr'){ui.afr=+el.value;render();return}
+  const ed=el.dataset.ed;if(!ed||!t)return;
+  const k=el.dataset.k;let val=el.value,rer=false;
+  if(ed==='toets'){t[k]=val;const r=S.toetsen.find(x=>x.id===t.id);if(r&&k==='titel'){r.titel=val;rer=true}}
+  else{const q=findV(t,el.dataset.v);if(!q)return;ui.openV=q.id;
+   if(ed==='vraag'){if(k==='max'){val=num(val);if(!(val>0))return;rer=true}if(k==='blz')val=val.replace(/\D/g,'');if(k==='nr'||k==='label')rer=true;q[k]=val}
+   else if(ed==='deel'){const dd=q.delen.find(x=>x.id===el.dataset.d);if(!dd)return;if(k==='max'){val=num(val);if(!(val>0))return;rer=true}if(k==='blz')val=val.replace(/\D/g,'');dd[k]=val}
+   else{const cc=codeList(t,el.dataset.v,el.dataset.d)?.find(x=>x.id===el.dataset.c);if(!cc)return;if(k==='aftrek'){val=num(val.replace(/^[−-]/,''));val=val>0?val:0}cc[k]=val}}
+  save();if(rer)render();
+});
+main.addEventListener('input',e=>{
+  const el=e.target,t=act();
+  if(el.classList.contains('opm')){ent(t,el.dataset.l,el.dataset.k).o=el.value;save();if(ui.modus==='lln')side();return}
+  if(el.id==='alg'){(t.alg||={})[ui.lln]=el.value;save();side()}
+});
+main.addEventListener('keydown',e=>{
+  const el=e.target;if(!el.classList.contains('sc')||e.key!=='Enter')return;
+  e.preventDefault();const l=el.dataset.l,k=el.dataset.k;el.blur();
+  const t=act(),us=units(t);
+  if(ui.modus==='vraag'){const ll=aanwezig(t),i=ll.findIndex(x=>x.id===l);if(ll[i+1])focusSc(ll[i+1].id,k)}
+  else{const i=us.findIndex(x=>x.key===k);if(us[i+1])focusSc(l,us[i+1].key)}
+});
+main.addEventListener('dragover',e=>{const d=e.target.closest('#drop');if(d){e.preventDefault();d.classList.add('over')}});
+main.addEventListener('dragleave',e=>{const d=e.target.closest('#drop');if(d)d.classList.remove('over')});
+main.addEventListener('drop',e=>{const d=e.target.closest('#drop');if(!d)return;e.preventDefault();d.classList.remove('over');importFiles([...e.dataTransfer.files])});
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(ui.tab==='verbeter'&&ui.modus==='vraag'&&ui.toonOpl)drawOpl()},250)});
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+init();
+}
+</script>
+</body>
+</html>

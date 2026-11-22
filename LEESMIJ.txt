@@ -1,0 +1,24 @@
+Skoreboek - installeerbare verbeterapp
+======================================
+
+Inhoud van deze map (alles samen online zetten, mapstructuur behouden):
+  index.html              de app
+  manifest.webmanifest    maakt de app installeerbaar
+  sw.js                   laat de app offline werken
+  icon-*.png              app-iconen
+  pdfjs/                  PDF-weergave van de modeloplossing (Mozilla pdf.js, Apache-licentie)
+
+Online zetten met GitHub Pages
+  1. Maak een gratis account op github.com.
+  2. Klik op "New repository", naam bv. "skoreboek", zet hem op Public, klik "Create repository".
+  3. Klik op "uploading an existing file" en sleep ALLE bestanden en de map pdfjs erin. Klik "Commit changes".
+  4. Ga naar Settings > Pages. Kies bij "Branch" de branch "main" en map "/ (root)". Klik Save.
+  5. Na 1 à 2 minuten staat de app op https://JOUWNAAM.github.io/skoreboek/
+
+Installeren op je Android-tablet
+  Open die link in Chrome > menu (drie puntjes) > "App installeren" of "Toevoegen aan startscherm".
+
+Belangrijk
+  - Je gegevens (klassen, scores) staan alleen op het toestel waar je werkt. Er komt niets op GitHub.
+  - Maak regelmatig een back-up via het tabblad Back-up (delen naar OneDrive).
+  - Een nieuwe versie van de app? Vervang de bestanden op GitHub en verhoog in sw.js het getal in VERSIE.
